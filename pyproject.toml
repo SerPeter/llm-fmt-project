@@ -1,0 +1,29 @@
+[project]
+name = "llm-fmt-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+
+[dependency-groups]
+dev = [
+    "pre-commit~=4.0",
+    "yamlfix~=1.17",
+    "ruff~=0.11",
+    "hatchling~=1.18",
+    "hatch~=1.14",
+    "yamlfix~=1.17",
+    "basedpyright~=1.29",
+]
+test = [
+    "pytest~=8.3",
+    "pytest-mock~=3.14",
+    "pytest-cov~=5.0",
+    "pytest-bdd~=7.1",
+    "pytest-timeout~=2.4",
+]
+
+[tool.uv]
+default-groups = ["dev", "test"]
