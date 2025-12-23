@@ -20,7 +20,7 @@ class OrderedCommand(click.Command):
         info_name: str | None,
         args: list[str],
         parent: click.Context | None = None,
-        **extra,
+        **extra: object,
     ) -> click.Context:
         """Create context and track filter order."""
         ctx = super().make_context(info_name, args, parent, **extra)
@@ -105,7 +105,7 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
 )
 @click.argument(
     "input_file",
-    type=click.Path(exists=True, path_type=Path),
+    type=click.Path(path_type=Path),
     required=False,
 )
 @click.pass_context
@@ -126,14 +126,22 @@ def main(
     Filters are applied in the order specified on the command line.
     """
     # Read input
-    data = input_file.read_bytes() if input_file else sys.stdin.buffer.read()
+    if input_file is None or str(input_file) == "-":
+        data = sys.stdin.buffer.read()
+        filename: Path | None = None
+    else:
+        if not input_file.exists():
+            msg = f"File not found: {input_file}"
+            raise click.ClickException(msg)
+        data = input_file.read_bytes()
+        filename = input_file
 
     # Build pipeline
     builder = PipelineBuilder()
 
     # Configure parser
     if input_format == "auto":
-        builder.with_auto_parser(filename=input_file, data=data)
+        builder.with_auto_parser(filename=filename, data=data)
     else:
         builder.with_parser(PARSER_MAP[input_format]())
 

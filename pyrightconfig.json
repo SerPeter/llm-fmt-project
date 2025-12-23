@@ -1,0 +1,6 @@
+{
+  "exclude": ["tests"],
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": "warning",
+  "reportUnknownMemberType": "warning"
+}

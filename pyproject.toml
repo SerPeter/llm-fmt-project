@@ -62,9 +62,9 @@ test = [
 [tool.uv]
 default-groups = ["dev", "test"]
 
-[tool.mypy]
-python_version = "3.14"
-strict = true
+[tool.basedpyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

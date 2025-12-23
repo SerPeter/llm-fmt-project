@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from llm_fmt.errors import ParseError
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -21,9 +23,13 @@ class JsonParser:
             Parsed Python object.
 
         Raises:
-            orjson.JSONDecodeError: If JSON is invalid.
+            ParseError: If JSON is invalid.
         """
-        return orjson.loads(data)
+        try:
+            return orjson.loads(data)
+        except orjson.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise ParseError(msg) from e
 
     def parse_stream(self, stream: Iterator[bytes]) -> Iterator[Any]:
         """Streaming JSON parse (future).

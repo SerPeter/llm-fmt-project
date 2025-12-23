@@ -37,6 +37,8 @@ class Pipeline:
         """
         try:
             parsed = self.parser.parse(data)
+        except ParseError:
+            raise
         except Exception as e:
             raise ParseError(str(e)) from e
 
