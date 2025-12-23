@@ -13,7 +13,19 @@ if TYPE_CHECKING:
 
 
 class JsonEncoder:
-    """Encoder for compact JSON format."""
+    """Encoder for compact JSON format.
+
+    Args:
+        sort_keys: Sort object keys alphabetically for deterministic output.
+    """
+
+    def __init__(self, *, sort_keys: bool = False) -> None:
+        """Initialize encoder with options.
+
+        Args:
+            sort_keys: Sort object keys alphabetically.
+        """
+        self._sort_keys = sort_keys
 
     def encode(self, data: Any) -> str:  # noqa: ANN401
         """Encode data to compact JSON.
@@ -24,7 +36,10 @@ class JsonEncoder:
         Returns:
             Minified JSON string.
         """
-        return orjson.dumps(data).decode()
+        opts = orjson.OPT_NON_STR_KEYS
+        if self._sort_keys:
+            opts |= orjson.OPT_SORT_KEYS
+        return orjson.dumps(data, option=opts).decode()
 
     def encode_stream(self, stream: Iterator[Any]) -> Iterator[str]:
         """Streaming JSON encode.
@@ -39,13 +54,17 @@ class JsonEncoder:
             Each item is encoded separately.
             For JSON array streaming, items are yielded as array elements.
         """
+        opts = orjson.OPT_NON_STR_KEYS
+        if self._sort_keys:
+            opts |= orjson.OPT_SORT_KEYS
+
         first = True
         yield "["
 
         for item in stream:
             if not first:
                 yield ","
-            yield orjson.dumps(item).decode()
+            yield orjson.dumps(item, option=opts).decode()
             first = False
 
         yield "]"
