@@ -88,6 +88,36 @@ class TestCliStdin:
 
         assert result.exit_code == 0
 
+    def test_stdin_utf8_unicode(self) -> None:
+        """Test UTF-8 unicode content is preserved."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "json"], input='{"emoji": "🎉", "text": "日本語"}')
+
+        assert result.exit_code == 0
+        assert "🎉" in result.output
+        assert "日本語" in result.output
+
+    def test_stdin_piped_to_json(self) -> None:
+        """Test piped stdin to JSON output."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "json"], input='{"a": 1, "b": 2}')
+
+        assert result.exit_code == 0
+        assert '{"a":1,"b":2}' in result.output
+
+    def test_stdin_multiline_json(self) -> None:
+        """Test multiline JSON input."""
+        multiline_input = """{
+  "name": "test",
+  "values": [1, 2, 3]
+}"""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "json"], input=multiline_input)
+
+        assert result.exit_code == 0
+        assert '"name":"test"' in result.output
+        assert '"values":[1,2,3]' in result.output
+
 
 class TestCliOutputFile:
     """Tests for output file option."""
@@ -260,3 +290,90 @@ class TestCliNoColor:
         result = runner.invoke(main, [str(input_file), "--no-color"])
 
         assert result.exit_code == 0
+
+
+class TestCliStdout:
+    """Tests for stdout output handling."""
+
+    def test_stdout_no_trailing_newline_with_nl_false(self) -> None:
+        """Test output doesn't add extra trailing newline."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "json"], input='{"a": 1}')
+
+        # Output should be clean JSON without extra newlines
+        assert result.exit_code == 0
+        # The output should end with the JSON, no extra newlines
+        assert result.output == '{"a":1}'
+
+    def test_stdout_toon_format(self) -> None:
+        """Test TOON output to stdout."""
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["-f", "toon"],
+            input='[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]',
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.strip().split("\n")
+        assert len(lines) == 3  # header + 2 data rows
+        assert "id|name" in lines[0]
+
+    def test_stdout_yaml_format(self) -> None:
+        """Test YAML output to stdout."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "yaml"], input='{"name": "test", "value": 42}')
+
+        assert result.exit_code == 0
+        assert "name: test" in result.output
+        assert "value: 42" in result.output
+
+    def test_stdout_utf8_preserved(self, tmp_path) -> None:
+        """Test UTF-8 content preserved in file output."""
+        input_file = tmp_path / "test.json"
+        input_file.write_text('{"emoji": "🚀", "text": "Привет"}', encoding="utf-8")
+        output_file = tmp_path / "output.json"
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main, [str(input_file), "-f", "json", "-o", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        content = output_file.read_text(encoding="utf-8")
+        assert "🚀" in content
+        assert "Привет" in content
+
+
+class TestCliPipeline:
+    """Tests simulating shell pipeline usage."""
+
+    def test_pipe_json_to_toon(self) -> None:
+        """Test simulating: echo '{"a":1}' | llm-fmt."""
+        runner = CliRunner()
+        result = runner.invoke(main, input='{"key": "value"}')
+
+        assert result.exit_code == 0
+        assert "key" in result.output
+
+    def test_pipe_array_to_toon(self) -> None:
+        """Test simulating: cat data.json | llm-fmt -f toon."""
+        json_array = '[{"x": 1}, {"x": 2}, {"x": 3}]'
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "toon"], input=json_array)
+
+        assert result.exit_code == 0
+        assert "x" in result.output
+        assert "1" in result.output
+        assert "2" in result.output
+        assert "3" in result.output
+
+    def test_pipe_with_format_conversion(self) -> None:
+        """Test simulating: cat data.yaml | llm-fmt -F yaml -f json."""
+        yaml_input = "name: test\nvalue: 123"
+        runner = CliRunner()
+        result = runner.invoke(main, ["-F", "yaml", "-f", "json"], input=yaml_input)
+
+        assert result.exit_code == 0
+        assert '"name":"test"' in result.output
+        assert '"value":123' in result.output

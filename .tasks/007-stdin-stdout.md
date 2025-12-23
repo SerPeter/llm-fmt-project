@@ -3,7 +3,7 @@
 **Phase**: 1 - MVP  
 **Priority**: +150
 **Storypoints**: 2  
-**Status**: [ ] Not started
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,11 +11,11 @@ Ensure robust stdin/stdout handling for shell pipeline usage.
 
 ## Requirements
 
-- [ ] Read from stdin when no file argument or `-` provided
-- [ ] Write to stdout by default
-- [ ] Handle binary mode correctly for orjson
-- [ ] Don't hang waiting for input when stdin is empty/TTY
-- [ ] Proper encoding handling (UTF-8)
+- [x] Read from stdin when no file argument or `-` provided
+- [x] Write to stdout by default
+- [x] Handle binary mode correctly for orjson
+- [x] Don't hang waiting for input when stdin is empty/TTY
+- [x] Proper encoding handling (UTF-8)
 
 ## Implementation Details
 
@@ -97,12 +97,12 @@ llm-fmt input.json | head -n 10       # Pipe to other tools
 
 ## Acceptance Criteria
 
-- [ ] `cat file.json | llm-fmt` works
-- [ ] `llm-fmt` without args shows help (not hang)
-- [ ] `llm-fmt - < file.json` reads from stdin
-- [ ] Output to stdout doesn't include extra newlines
-- [ ] UTF-8 content preserved correctly
-- [ ] Binary stdin mode works with orjson
+- [x] `cat file.json | llm-fmt` works
+- [x] `llm-fmt` without args shows help (not hang)
+- [x] `llm-fmt - < file.json` reads from stdin
+- [x] Output to stdout doesn't include extra newlines
+- [x] UTF-8 content preserved correctly
+- [x] Binary stdin mode works with orjson
 
 ## Test Cases
 

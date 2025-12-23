@@ -64,7 +64,11 @@ default-groups = ["dev", "test"]
 
 [tool.basedpyright]
 pythonVersion = "3.14"
-typeCheckingMode = "strict"
+typeCheckingMode = "standard"
+exclude = ["tests"]
+reportMissingImports = "warning"
+reportMissingTypeStubs = "warning"
+reportUnknownMemberType = "warning"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

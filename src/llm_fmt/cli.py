@@ -174,7 +174,11 @@ def main(
     Filters are applied in the order specified on the command line.
     """
     # Read input
-    if input_file is None or str(input_file) == "-":
+    if input_file is None:
+        # Check if stdin is a TTY (interactive terminal with no piped input)
+        if sys.stdin.isatty():
+            click.echo(ctx.get_help())
+            ctx.exit(0)
         data = sys.stdin.buffer.read()
         filename: Path | None = None
     else:
@@ -209,7 +213,7 @@ def main(
 
         # Output to file or stdout
         if output_file:
-            output_file.write_text(result)
+            output_file.write_text(result, encoding="utf-8")
             click.echo(f"Written to {output_file}", err=True)
         else:
             click.echo(result, nl=False)
