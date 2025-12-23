@@ -45,11 +45,12 @@ class Encoder(Protocol):
         ...
 
 
-def get_encoder(format_name: str) -> Encoder:
+def get_encoder(format_name: str, *, sort_keys: bool = False) -> Encoder:
     """Get encoder by format name.
 
     Args:
         format_name: Name of the output format.
+        sort_keys: Sort object keys alphabetically (JSON only).
 
     Returns:
         Encoder instance.
@@ -62,4 +63,7 @@ def get_encoder(format_name: str) -> Encoder:
         supported = ", ".join(sorted(ENCODER_MAP.keys()))
         msg = f"Unsupported format: {format_name}. Supported: {supported}"
         raise ValueError(msg)
+
+    if format_lower == "json":
+        return JsonEncoder(sort_keys=sort_keys)
     return ENCODER_MAP[format_lower]()

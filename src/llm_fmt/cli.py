@@ -64,6 +64,34 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
 }
 
 
+def _build_filters(
+    builder: PipelineBuilder,
+    filter_order: list[tuple[str, str]],
+) -> ConfigurationError:
+    """Add filters to the pipeline builder.
+
+    Args:
+        builder: Pipeline builder to add filters to.
+        filter_order: List of (filter_type, value) tuples.
+
+    Returns:
+        ConfigurationError with any validation errors (empty if none).
+    """
+    errors = ConfigurationError()
+    for i, (filter_type, value) in enumerate(filter_order):
+        try:
+            if filter_type == "include":
+                builder.add_filter(IncludeFilter(value))
+            elif filter_type == "exclude":
+                builder.add_filter(ExcludeFilter(value))
+            elif filter_type == "depth":
+                builder.add_filter(MaxDepthFilter(int(value)))
+        except ValueError as e:
+            location = f"--{filter_type}[{i}]" if filter_type != "depth" else "--max-depth"
+            errors.add(location, str(e))
+    return errors
+
+
 @click.command(cls=OrderedCommand)
 @click.version_option(version=__version__, prog_name="llm-fmt")
 @click.option(
@@ -103,6 +131,23 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     type=int,
     help="Maximum depth to traverse.",
 )
+@click.option(
+    "--output",
+    "-o",
+    "output_file",
+    type=click.Path(dir_okay=False, writable=True, path_type=Path),
+    help="Output file (default: stdout).",
+)
+@click.option(
+    "--sort-keys",
+    is_flag=True,
+    help="Sort object keys alphabetically (JSON format only).",
+)
+@click.option(
+    "--no-color",
+    is_flag=True,
+    help="Disable colored output.",
+)
 @click.argument(
     "input_file",
     type=click.Path(path_type=Path),
@@ -116,6 +161,9 @@ def main(
     include_patterns: tuple[str, ...],  # noqa: ARG001
     exclude_patterns: tuple[str, ...],  # noqa: ARG001
     max_depth: int | None,  # noqa: ARG001
+    output_file: Path | None,
+    sort_keys: bool,  # noqa: FBT001
+    no_color: bool,  # noqa: ARG001, FBT001
     input_file: Path | None,
 ) -> None:
     """Convert JSON/YAML/XML to token-efficient formats for LLM contexts.
@@ -146,24 +194,11 @@ def main(
         builder.with_parser(PARSER_MAP[input_format]())
 
     # Configure encoder
-    builder.with_format(output_format)
+    builder.with_format(output_format, sort_keys=sort_keys)
 
     # Add filters in CLI order
     filter_order = ctx.obj.get("filter_order", [])
-    errors = ConfigurationError()
-
-    for i, (filter_type, value) in enumerate(filter_order):
-        try:
-            if filter_type == "include":
-                builder.add_filter(IncludeFilter(value))
-            elif filter_type == "exclude":
-                builder.add_filter(ExcludeFilter(value))
-            elif filter_type == "depth":
-                builder.add_filter(MaxDepthFilter(int(value)))
-        except ValueError as e:
-            location = f"--{filter_type}[{i}]" if filter_type != "depth" else "--max-depth"
-            errors.add(location, str(e))
-
+    errors = _build_filters(builder, filter_order)
     if errors:
         raise click.ClickException(str(errors))
 
@@ -171,7 +206,13 @@ def main(
     try:
         pipeline = builder.build()
         result = pipeline.run(data)
-        click.echo(result, nl=False)
+
+        # Output to file or stdout
+        if output_file:
+            output_file.write_text(result)
+            click.echo(f"Written to {output_file}", err=True)
+        else:
+            click.echo(result, nl=False)
     except ParseError as e:
         msg = f"Parse error: {e}"
         raise click.ClickException(msg) from e

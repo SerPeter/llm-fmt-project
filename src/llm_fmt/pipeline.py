@@ -113,16 +113,22 @@ class PipelineBuilder:
         self._encoder = encoder
         return self
 
-    def with_format(self, format_name: str) -> PipelineBuilder:
+    def with_format(
+        self,
+        format_name: str,
+        *,
+        sort_keys: bool = False,
+    ) -> PipelineBuilder:
         """Set encoder by format name.
 
         Args:
             format_name: Format name (toon, json, yaml).
+            sort_keys: Sort object keys alphabetically (JSON only).
 
         Returns:
             Self for method chaining.
         """
-        self._encoder = get_encoder(format_name)
+        self._encoder = get_encoder(format_name, sort_keys=sort_keys)
         return self
 
     def add_filter(self, f: Filter) -> PipelineBuilder:

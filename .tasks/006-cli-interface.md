@@ -3,7 +3,7 @@
 **Phase**: 1 - MVP  
 **Priority**: +200
 **Storypoints**: 5  
-**Status**: [ ] Not started
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,12 +11,12 @@ Build the command-line interface using Click with intuitive UX and shell complet
 
 ## Requirements
 
-- [ ] Main `llm-fmt` command with subcommands or flags
-- [ ] `--format` option for output format selection
-- [ ] `--output` option for file output (default: stdout)
-- [ ] `--help` with clear usage examples
-- [ ] Exit codes: 0 success, 1 error, 2 invalid input
-- [ ] Color output for terminals (disable with `--no-color`)
+- [x] Main `llm-fmt` command with subcommands or flags
+- [x] `--format` option for output format selection
+- [x] `--output` option for file output (default: stdout)
+- [x] `--help` with clear usage examples
+- [x] Exit codes: 0 success, 1 error
+- [x] Color output for terminals (disable with `--no-color`)
 
 ## Implementation Details
 
@@ -167,13 +167,13 @@ Add to README with installation instructions.
 
 ## Acceptance Criteria
 
-- [ ] `llm-fmt --help` shows clear usage
-- [ ] `llm-fmt input.json` works (default format)
-- [ ] `llm-fmt input.json -f toon` converts to TOON
-- [ ] `llm-fmt - < input.json` reads from stdin
-- [ ] `llm-fmt input.json -o out.toon` writes to file
-- [ ] Invalid input shows helpful error message
-- [ ] `--version` shows package version
+- [x] `llm-fmt --help` shows clear usage
+- [x] `llm-fmt input.json` works (default format)
+- [x] `llm-fmt input.json -f toon` converts to TOON
+- [x] `llm-fmt - < input.json` reads from stdin
+- [x] `llm-fmt input.json -o out.toon` writes to file
+- [x] Invalid input shows helpful error message
+- [x] `--version` shows package version
 
 ## Test Cases
 
