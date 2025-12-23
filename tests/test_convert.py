@@ -64,8 +64,10 @@ class TestToonEncoder:
         encoder = ToonEncoder()
         assert encoder.encode([]) == ""
 
-    def test_non_list_raises(self) -> None:
-        """Test encoding non-list raises TypeError."""
+    def test_single_dict(self) -> None:
+        """Test encoding single dict creates header + row."""
         encoder = ToonEncoder()
-        with pytest.raises(TypeError, match="requires a list"):
-            encoder.encode({"key": "value"})
+        result = encoder.encode({"key": "value"})
+        lines = result.split("\n")
+        assert lines[0] == "key"
+        assert lines[1] == "value"

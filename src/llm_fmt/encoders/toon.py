@@ -8,11 +8,14 @@ Format:
     Data rows contain values separated by |
     Special values: null, true, false preserved as-is
     Strings containing | or newlines are escaped
+    Nested structures are JSON-encoded inline
 """
 
 from typing import TYPE_CHECKING, Any
 
 import orjson
+
+from llm_fmt.errors import EncodeError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -25,25 +28,76 @@ class ToonEncoder:
         """Encode data to TOON format.
 
         Args:
-            data: Input data, ideally a list of uniform dicts.
+            data: Input data - dict, list of dicts, or list of primitives.
 
         Returns:
             TOON-formatted string.
 
         Raises:
-            TypeError: If data is not a list or items are not dicts.
+            EncodeError: If data structure is not supported.
         """
-        if not isinstance(data, list):
-            msg = "TOON format requires a list of objects"
-            raise TypeError(msg)
+        if isinstance(data, dict):
+            return self._encode_single_object(data)
 
+        if isinstance(data, list):
+            return self._encode_list(data)
+
+        # Primitives
+        return self._encode_value(data)
+
+    def _encode_single_object(self, obj: dict[str, Any]) -> str:
+        """Encode a single object as header + single row.
+
+        Args:
+            obj: Dictionary to encode.
+
+        Returns:
+            TOON-formatted string with header and one data row.
+        """
+        if not obj:
+            return ""
+
+        keys = list(obj.keys())
+        header = self._encode_header(keys)
+        row = self._encode_row(keys, obj)
+        return f"{header}\n{row}"
+
+    def _encode_list(self, data: list[Any]) -> str:
+        """Encode a list to TOON format.
+
+        Args:
+            data: List to encode.
+
+        Returns:
+            TOON-formatted string.
+
+        Raises:
+            EncodeError: If list contains unsupported types.
+        """
         if not data:
             return ""
 
-        if not all(isinstance(item, dict) for item in data):
-            msg = "TOON format requires all items to be objects"
-            raise TypeError(msg)
+        # Check if all items are dicts
+        if all(isinstance(item, dict) for item in data):
+            return self._encode_object_array(data)
 
+        # List of primitives - one per line
+        if all(not isinstance(item, (dict, list)) for item in data):
+            return "\n".join(self._encode_value(item) for item in data)
+
+        # Mixed or nested lists - encode each item
+        msg = "TOON format does not support mixed arrays of objects and primitives"
+        raise EncodeError(msg)
+
+    def _encode_object_array(self, data: list[dict[str, Any]]) -> str:
+        """Encode array of objects in tabular format.
+
+        Args:
+            data: List of dictionaries.
+
+        Returns:
+            TOON-formatted string with header and data rows.
+        """
         # Get all unique keys in order of first appearance
         keys = self._get_ordered_keys(data)
 
@@ -119,7 +173,12 @@ class ToonEncoder:
         return str(value)
 
     def _escape_string(self, s: str) -> str:
-        """Escape string for TOON format.
+        r"""Escape string for TOON format.
+
+        Escapes:
+            - Backslashes: \\ -> \\\\
+            - Pipes: | -> \\|
+            - Newlines: \\n, \\r
 
         Args:
             s: String to escape.
@@ -127,8 +186,9 @@ class ToonEncoder:
         Returns:
             Escaped string.
         """
-        # Escape pipe and newline characters
-        if "|" in s or "\n" in s or "\r" in s:
+        needs_escape = "|" in s or "\n" in s or "\r" in s or "\\" in s
+        if needs_escape:
+            # Order matters: escape backslashes first
             s = s.replace("\\", "\\\\")
             s = s.replace("|", "\\|")
             s = s.replace("\n", "\\n")
