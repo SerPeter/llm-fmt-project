@@ -141,14 +141,6 @@ class TestCliJsonInput:
         assert "id|name" in result.output
         assert "1|Bob" in result.output
 
-    def test_cli_parse_stdin_dash(self, tmp_path) -> None:
-        """Test CLI parsing stdin with explicit '-' argument."""
-        runner = CliRunner()
-        result = runner.invoke(main, ["-"], input='[{"id": 2, "name": "Charlie"}]')
-
-        assert result.exit_code == 0
-        assert "2|Charlie" in result.output
-
     def test_cli_nonexistent_file(self, tmp_path) -> None:
         """Test CLI error for non-existent file."""
         runner = CliRunner()

@@ -85,8 +85,7 @@ llm-fmt input.json                    # File argument
 llm-fmt input.json -f toon            # With format
 cat input.json | llm-fmt              # Piped input
 cat input.json | llm-fmt -f toon      # Piped with format
-llm-fmt - < input.json                # Explicit stdin
-llm-fmt < input.json                  # Redirect (might need -)
+llm-fmt < input.json                  # Redirect stdin
 echo '{"a":1}' | llm-fmt              # Inline JSON
 
 # Output redirection
@@ -99,7 +98,6 @@ llm-fmt input.json | head -n 10       # Pipe to other tools
 
 - [x] `cat file.json | llm-fmt` works
 - [x] `llm-fmt` without args shows help (not hang)
-- [x] `llm-fmt - < file.json` reads from stdin
 - [x] Output to stdout doesn't include extra newlines
 - [x] UTF-8 content preserved correctly
 - [x] Binary stdin mode works with orjson

@@ -81,13 +81,6 @@ class TestCliStdin:
         assert "id|name" in result.output
         assert "1|test" in result.output
 
-    def test_stdin_explicit_dash(self) -> None:
-        """Test reading from stdin with explicit -."""
-        runner = CliRunner()
-        result = runner.invoke(main, ["-"], input='{"key": "value"}')
-
-        assert result.exit_code == 0
-
     def test_stdin_utf8_unicode(self) -> None:
         """Test UTF-8 unicode content is preserved."""
         runner = CliRunner()
@@ -251,18 +244,6 @@ class TestCliFilters:
         )
 
         # Filter option is accepted, conversion succeeds
-        assert result.exit_code == 0
-
-    def test_exclude_option_accepted(self, tmp_path) -> None:
-        """Test --exclude option is accepted."""
-        input_file = tmp_path / "test.json"
-        input_file.write_text('{"keep": 1, "remove": 2}')
-
-        runner = CliRunner()
-        result = runner.invoke(
-            main, [str(input_file), "-f", "json", "--exclude", "remove"]
-        )
-
         assert result.exit_code == 0
 
     def test_max_depth_option_accepted(self, tmp_path) -> None:

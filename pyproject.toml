@@ -21,7 +21,7 @@ dependencies = [
     "click>=8.1",
     "orjson>=3.10",
     "pyyaml>=6.0",
-    "dpath>=2.2",
+    "jmespath>=1.0",
 ]
 
 [project.optional-dependencies]

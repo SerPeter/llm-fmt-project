@@ -7,7 +7,7 @@ import click
 
 from llm_fmt import __version__
 from llm_fmt.errors import ConfigurationError, EncodeError, ParseError
-from llm_fmt.filters import ExcludeFilter, IncludeFilter, MaxDepthFilter
+from llm_fmt.filters import IncludeFilter, MaxDepthFilter
 from llm_fmt.parsers import JsonParser, YamlParser
 from llm_fmt.pipeline import PipelineBuilder
 
@@ -35,11 +35,6 @@ class OrderedCommand(click.Command):
                     filter_order.append(("include", args[i + 1]))
                     i += 2
                     continue
-            elif arg in ("--exclude", "-e"):
-                if i + 1 < len(args):
-                    filter_order.append(("exclude", args[i + 1]))
-                    i += 2
-                    continue
             elif arg in ("--max-depth", "-d"):
                 if i + 1 < len(args):
                     filter_order.append(("depth", args[i + 1]))
@@ -47,8 +42,6 @@ class OrderedCommand(click.Command):
                     continue
             elif arg.startswith("--filter="):
                 filter_order.append(("include", arg.split("=", 1)[1]))
-            elif arg.startswith("--exclude="):
-                filter_order.append(("exclude", arg.split("=", 1)[1]))
             elif arg.startswith("--max-depth="):
                 filter_order.append(("depth", arg.split("=", 1)[1]))
             i += 1
@@ -82,12 +75,10 @@ def _build_filters(
         try:
             if filter_type == "include":
                 builder.add_filter(IncludeFilter(value))
-            elif filter_type == "exclude":
-                builder.add_filter(ExcludeFilter(value))
             elif filter_type == "depth":
                 builder.add_filter(MaxDepthFilter(int(value)))
         except ValueError as e:
-            location = f"--{filter_type}[{i}]" if filter_type != "depth" else "--max-depth"
+            location = f"--filter[{i}]" if filter_type == "include" else "--max-depth"
             errors.add(location, str(e))
     return errors
 
@@ -115,14 +106,7 @@ def _build_filters(
     "-i",
     "include_patterns",
     multiple=True,
-    help="Include only paths matching dpath pattern. Can be repeated.",
-)
-@click.option(
-    "--exclude",
-    "-e",
-    "exclude_patterns",
-    multiple=True,
-    help="Exclude paths matching dpath pattern. Can be repeated.",
+    help="JMESPath expression to extract data. Can be repeated.",
 )
 @click.option(
     "--max-depth",
@@ -159,7 +143,6 @@ def main(
     output_format: str,
     input_format: str,
     include_patterns: tuple[str, ...],  # noqa: ARG001
-    exclude_patterns: tuple[str, ...],  # noqa: ARG001
     max_depth: int | None,  # noqa: ARG001
     output_file: Path | None,
     sort_keys: bool,  # noqa: FBT001
@@ -171,7 +154,7 @@ def main(
     Supports TOON, compact JSON, and YAML output formats.
     Reduces token consumption by 30-60% when passing structured data to LLMs.
 
-    Filters are applied in the order specified on the command line.
+    Filters use JMESPath syntax (e.g., users[*].email, items[?active]).
     """
     # Read input
     if input_file is None:

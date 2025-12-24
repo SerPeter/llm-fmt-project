@@ -3,13 +3,12 @@
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from llm_fmt.filters.depth import MaxDepthFilter
-from llm_fmt.filters.exclude import ExcludeFilter
 from llm_fmt.filters.include import IncludeFilter
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-__all__ = ["ExcludeFilter", "Filter", "FilterChain", "IncludeFilter", "MaxDepthFilter"]
+__all__ = ["Filter", "FilterChain", "IncludeFilter", "MaxDepthFilter"]
 
 
 @runtime_checkable
