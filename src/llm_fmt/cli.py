@@ -10,7 +10,7 @@ from llm_fmt.errors import EncodeError, ParseError
 from llm_fmt.filters import IncludeFilter, MaxDepthFilter
 from llm_fmt.parsers import JsonParser, YamlParser
 from llm_fmt.pipeline import PipelineBuilder
-
+from llm_fmt.tokens import TOKENIZERS, count_tokens_safe, estimate_tokens
 
 PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     "json": JsonParser,
@@ -67,13 +67,24 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     is_flag=True,
     help="Disable colored output.",
 )
+@click.option(
+    "--count-tokens",
+    is_flag=True,
+    help="Show token count for output.",
+)
+@click.option(
+    "--tokenizer",
+    type=click.Choice(list(TOKENIZERS.keys())),
+    default="cl100k_base",
+    help="Tokenizer for counting (default: cl100k_base).",
+)
 @click.argument(
     "input_file",
     type=click.Path(path_type=Path),
     required=False,
 )
 @click.pass_context
-def main(
+def main(  # noqa: PLR0912, PLR0913, PLR0915
     ctx: click.Context,
     output_format: str,
     input_format: str,
@@ -82,6 +93,8 @@ def main(
     output_file: Path | None,
     sort_keys: bool,  # noqa: FBT001
     no_color: bool,  # noqa: ARG001, FBT001
+    count_tokens: bool,  # noqa: FBT001
+    tokenizer: str,
     input_file: Path | None,
 ) -> None:
     """Convert JSON/YAML/XML to token-efficient formats for LLM contexts.
@@ -144,6 +157,15 @@ def main(
             click.echo(f"Written to {output_file}", err=True)
         else:
             click.echo(result, nl=False)
+
+        # Token counting
+        if count_tokens:
+            token_count = count_tokens_safe(result, tokenizer)
+            if token_count is not None:
+                click.echo(f"Tokens ({tokenizer}): {token_count}", err=True)
+            else:
+                estimated = estimate_tokens(result)
+                click.echo(f"Tokens (estimated): ~{estimated}", err=True)
     except ParseError as e:
         msg = f"Parse error: {e}"
         raise click.ClickException(msg) from e

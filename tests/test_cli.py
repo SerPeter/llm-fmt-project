@@ -4,6 +4,7 @@ import json
 
 from click.testing import CliRunner
 
+from llm_fmt import tokens
 from llm_fmt.cli import main
 
 
@@ -377,3 +378,92 @@ class TestCliPipeline:
         assert result.exit_code == 0
         assert '"name":"test"' in result.output
         assert '"value":123' in result.output
+
+
+class TestCliTokenCounting:
+    """Tests for token counting options."""
+
+    def test_count_tokens_option_accepted(self) -> None:
+        """Test --count-tokens option is accepted."""
+        runner = CliRunner()
+        result = runner.invoke(
+            main, ["-f", "json", "--count-tokens"], input='{"key": "value"}'
+        )
+
+        assert result.exit_code == 0
+        # Token info goes to output (stderr captured)
+        assert "Tokens" in result.output
+
+    def test_tokenizer_option_accepted(self) -> None:
+        """Test --tokenizer option is accepted."""
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            ["-f", "json", "--count-tokens", "--tokenizer", "o200k_base"],
+            input='{"key": "value"}',
+        )
+
+        assert result.exit_code == 0
+        # Check tokenizer name in output if tiktoken available
+        if tokens.is_available():
+            assert "o200k_base" in result.output
+        else:
+            assert "estimated" in result.output
+
+    def test_count_tokens_with_tiktoken(self) -> None:
+        """Test accurate token count when tiktoken available."""
+        if not tokens.is_available():
+            return  # Skip if tiktoken not installed
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main, ["-f", "json", "--count-tokens"], input='{"key": "value"}'
+        )
+
+        assert result.exit_code == 0
+        assert "cl100k_base" in result.output
+        # Should have a number
+        assert any(c.isdigit() for c in result.output)
+
+    def test_count_tokens_without_tiktoken(self, monkeypatch) -> None:
+        """Test estimated count when tiktoken not available."""
+        # Mock count_tokens_safe to return None
+        monkeypatch.setattr(
+            "llm_fmt.cli.count_tokens_safe", lambda text, tokenizer: None
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main, ["-f", "json", "--count-tokens"], input='{"key": "value"}'
+        )
+
+        assert result.exit_code == 0
+        assert "estimated" in result.output
+
+    def test_count_tokens_to_file(self, tmp_path) -> None:
+        """Test --count-tokens works with output file."""
+        input_file = tmp_path / "test.json"
+        input_file.write_text('{"key": "value"}')
+        output_file = tmp_path / "output.json"
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [str(input_file), "-f", "json", "-o", str(output_file), "--count-tokens"],
+        )
+
+        assert result.exit_code == 0
+        assert output_file.exists()
+        # Both written and token info in output
+        assert "Written to" in result.output
+        assert "Tokens" in result.output
+
+    def test_help_shows_tokenizer_options(self) -> None:
+        """Test --help shows tokenizer options."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["--help"])
+
+        assert result.exit_code == 0
+        assert "--count-tokens" in result.output
+        assert "--tokenizer" in result.output
+        assert "cl100k_base" in result.output
