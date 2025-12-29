@@ -1,11 +1,13 @@
 """CLI entry point for llm-fmt."""
 
+import json
 import sys
 from pathlib import Path
 
 import click
 
 from llm_fmt import __version__
+from llm_fmt.analyze import analyze, format_report, report_to_dict
 from llm_fmt.errors import EncodeError, ParseError
 from llm_fmt.filters import IncludeFilter, MaxDepthFilter
 from llm_fmt.parsers import JsonParser, YamlParser
@@ -78,6 +80,17 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     default="cl100k_base",
     help="Tokenizer for counting (default: cl100k_base).",
 )
+@click.option(
+    "--analyze",
+    is_flag=True,
+    help="Compare token counts across formats and recommend optimal choice.",
+)
+@click.option(
+    "--json",
+    "output_json",
+    is_flag=True,
+    help="Output analysis in JSON format (only with --analyze).",
+)
 @click.argument(
     "input_file",
     type=click.Path(path_type=Path),
@@ -92,9 +105,11 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
     max_depth: int | None,
     output_file: Path | None,
     sort_keys: bool,  # noqa: FBT001
-    no_color: bool,  # noqa: ARG001, FBT001
+    no_color: bool,  # noqa: FBT001
     count_tokens: bool,  # noqa: FBT001
     tokenizer: str,
+    analyze: bool,  # noqa: FBT001
+    output_json: bool,  # noqa: FBT001
     input_file: Path | None,
 ) -> None:
     """Convert JSON/YAML/XML to token-efficient formats for LLM contexts.
@@ -118,6 +133,11 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
             raise click.ClickException(msg)
         data = input_file.read_bytes()
         filename = input_file
+
+    # Analysis mode
+    if analyze:
+        _run_analysis(data, input_format, filename, tokenizer, output_json, no_color)
+        return
 
     # Build pipeline
     builder = PipelineBuilder()
@@ -172,6 +192,70 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
     except EncodeError as e:
         msg = f"Encode error: {e}"
         raise click.ClickException(msg) from e
+
+
+def _run_analysis(
+    data: bytes,
+    input_format: str,
+    filename: Path | None,
+    tokenizer: str,
+    output_json: bool,  # noqa: FBT001
+    no_color: bool,  # noqa: FBT001
+) -> None:
+    """Run analysis mode and output report.
+
+    Args:
+        data: Raw input data.
+        input_format: Input format (json, yaml, auto).
+        filename: Input filename for auto-detection.
+        tokenizer: Tokenizer name.
+        output_json: Output as JSON.
+        no_color: Disable colors.
+    """
+    # Parse input to get Python object
+    parser = _detect_parser(filename, data) if input_format == "auto" else PARSER_MAP[input_format]()
+
+    try:
+        parsed_data = parser.parse(data)
+    except ParseError as e:
+        msg = f"Parse error: {e}"
+        raise click.ClickException(msg) from e
+
+    # Run analysis
+    report = analyze(parsed_data, tokenizer)
+
+    # Output report
+    if output_json:
+        click.echo(json.dumps(report_to_dict(report), indent=2))
+    else:
+        click.echo(format_report(report, use_color=not no_color))
+
+
+def _detect_parser(filename: Path | None, data: bytes) -> JsonParser | YamlParser:
+    """Detect parser based on filename or content.
+
+    Args:
+        filename: Input filename.
+        data: Raw data.
+
+    Returns:
+        Parser instance.
+    """
+    # Try filename extension first
+    if filename:
+        suffix = filename.suffix.lower()
+        if suffix in {".json", ".jsonl"}:
+            return JsonParser()
+        if suffix in {".yaml", ".yml"}:
+            return YamlParser()
+
+    # Try to detect from content
+    text = data.decode("utf-8", errors="replace").strip()
+    if text.startswith(("{", "[")):
+        return JsonParser()
+
+    # Default to YAML (it can parse most JSON too)
+    return YamlParser()
 
 
 if __name__ == "__main__":

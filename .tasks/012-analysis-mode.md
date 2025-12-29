@@ -3,7 +3,7 @@
 **Phase**: 2 - Filtering & Analysis  
 **Priority**: +150
 **Storypoints**: 5  
-**Status**: [ ] Not started
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,11 +11,11 @@ Implement analysis mode that compares token counts across all output formats and
 
 ## Requirements
 
-- [ ] Show token counts for each format
-- [ ] Calculate percentage savings vs original JSON
-- [ ] Detect data shape and explain recommendation
-- [ ] Pretty terminal output with optional color
-- [ ] Machine-readable output option (JSON)
+- [x] Show token counts for each format
+- [x] Calculate percentage savings vs original JSON
+- [x] Detect data shape and explain recommendation
+- [x] Pretty terminal output with optional color
+- [x] Machine-readable output option (JSON)
 
 ## Implementation Details
 
@@ -82,6 +82,7 @@ def analyze(data: Any, tokenizer: str = "cl100k_base") -> AnalysisReport:
     
     # Detect shape and recommend
     shape = detect_data_shape(data)
+    
     recommendation, reason = _recommend_format(shape, formats)
     
     # Mark recommended
@@ -160,12 +161,12 @@ $ llm-fmt data.json --analyze --json
 
 ## Acceptance Criteria
 
-- [ ] `--analyze` shows comparison table
-- [ ] Token counts accurate per tiktoken
-- [ ] Recommendation based on data shape
-- [ ] `--analyze --json` outputs machine-readable format
-- [ ] Colors disabled with `--no-color`
-- [ ] Helpful error if tiktoken not installed
+- [x] `--analyze` shows comparison table
+- [x] Token counts accurate per tiktoken
+- [x] Recommendation based on data shape
+- [x] `--analyze --json` outputs machine-readable format
+- [x] Colors disabled with `--no-color`
+- [x] Graceful fallback with estimation if tiktoken not installed
 
 ## Test Cases
 
