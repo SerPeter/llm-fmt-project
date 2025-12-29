@@ -2,17 +2,15 @@
 
 import json
 
-import pytest
+from click.testing import CliRunner
 
 from llm_fmt.analyze import (
-    AnalysisReport,
-    DataShape,
-    FormatAnalysis,
     analyze,
     detect_data_shape,
     format_report,
     report_to_dict,
 )
+from llm_fmt.cli import main
 
 
 class TestDetectDataShape:
@@ -92,6 +90,72 @@ class TestDetectDataShape:
         data = {"a": {}, "b": {}, "c": {}, "d": 1}
         shape = detect_data_shape(data)
         assert shape.is_mostly_primitives is False
+
+    def test_sample_keys_uniform_array(self) -> None:
+        """Sample keys are captured for uniform arrays."""
+        data = [{"id": 1, "name": "Alice", "age": 30}]
+        shape = detect_data_shape(data)
+
+        assert "id" in shape.sample_keys
+        assert "name" in shape.sample_keys
+        assert "age" in shape.sample_keys
+
+    def test_sample_keys_flat_object(self) -> None:
+        """Sample keys are captured for flat objects."""
+        data = {"name": "test", "value": 42, "active": True}
+        shape = detect_data_shape(data)
+
+        assert "name" in shape.sample_keys
+        assert "value" in shape.sample_keys
+        assert "active" in shape.sample_keys
+
+    def test_sample_keys_limited_to_10(self) -> None:
+        """Sample keys are limited to 10 entries."""
+        data = {f"field{i}": i for i in range(20)}
+        shape = detect_data_shape(data)
+
+        assert len(shape.sample_keys) == 10
+
+    def test_large_array_sampling(self) -> None:
+        """Large arrays are sampled efficiently."""
+        # Create array larger than default max_sample (100)
+        data = [{"id": i, "name": f"item{i}"} for i in range(500)]
+        shape = detect_data_shape(data)
+
+        # Should still detect as uniform
+        assert shape.is_uniform_array is True
+        assert shape.array_length == 500
+        assert shape.field_count == 2
+
+    def test_large_array_with_custom_sample(self) -> None:
+        """Custom max_sample parameter works."""
+        data = [{"id": i} for i in range(1000)]
+        shape = detect_data_shape(data, max_sample=50)
+
+        assert shape.is_uniform_array is True
+        assert shape.array_length == 1000
+
+    def test_sampling_detects_non_uniform_in_sample(self) -> None:
+        """Non-uniform arrays detected within sample range."""
+        # First 50 items uniform, then different
+        uniform_part = [{"id": i, "name": f"name{i}"} for i in range(50)]
+        non_uniform_part = [{"id": i, "extra": "field"} for i in range(50, 100)]
+        data = uniform_part + non_uniform_part
+
+        # With max_sample=100 (default), should detect non-uniform
+        shape = detect_data_shape(data)
+        assert shape.is_uniform_array is False
+
+    def test_sampling_uniform_at_head(self) -> None:
+        """If first max_sample items are uniform, detected as uniform."""
+        # First 100 uniform, rest non-uniform (but not sampled)
+        uniform_part = [{"id": i, "name": f"name{i}"} for i in range(100)]
+        non_uniform_part = [{"id": i, "extra": "field"} for i in range(100, 200)]
+        data = uniform_part + non_uniform_part
+
+        # With max_sample=100, only samples first 100 which are uniform
+        shape = detect_data_shape(data, max_sample=100)
+        assert shape.is_uniform_array is True
 
 
 class TestAnalyze:
@@ -245,6 +309,7 @@ class TestReportToDict:
         assert "field_count" in shape
         assert "max_depth" in shape
         assert "description" in shape
+        assert "sample_keys" in shape
 
     def test_report_to_dict_json_serializable(self) -> None:
         """Report dict is JSON serializable."""
@@ -263,10 +328,6 @@ class TestAnalyzeCLI:
 
     def test_analyze_cli_accepted(self) -> None:
         """Test --analyze option is accepted."""
-        from click.testing import CliRunner
-
-        from llm_fmt.cli import main
-
         runner = CliRunner()
         result = runner.invoke(main, ["--analyze"], input='{"key": "value"}')
 
@@ -275,10 +336,6 @@ class TestAnalyzeCLI:
 
     def test_analyze_cli_json_output(self) -> None:
         """Test --analyze --json output."""
-        from click.testing import CliRunner
-
-        from llm_fmt.cli import main
-
         runner = CliRunner()
         result = runner.invoke(main, ["--analyze", "--json"], input='[{"id": 1}]')
 
@@ -291,10 +348,6 @@ class TestAnalyzeCLI:
 
     def test_analyze_cli_with_file(self, tmp_path) -> None:
         """Test --analyze with input file."""
-        from click.testing import CliRunner
-
-        from llm_fmt.cli import main
-
         input_file = tmp_path / "test.json"
         input_file.write_text('[{"id": 1, "name": "Alice"}]')
 
@@ -306,10 +359,6 @@ class TestAnalyzeCLI:
 
     def test_analyze_cli_with_tokenizer(self) -> None:
         """Test --analyze with different tokenizer."""
-        from click.testing import CliRunner
-
-        from llm_fmt.cli import main
-
         runner = CliRunner()
         result = runner.invoke(
             main,
@@ -322,10 +371,6 @@ class TestAnalyzeCLI:
 
     def test_analyze_cli_no_color(self) -> None:
         """Test --analyze with --no-color."""
-        from click.testing import CliRunner
-
-        from llm_fmt.cli import main
-
         runner = CliRunner()
         result = runner.invoke(
             main, ["--analyze", "--no-color"], input='{"key": "value"}'
@@ -337,10 +382,6 @@ class TestAnalyzeCLI:
 
     def test_help_shows_analyze_options(self) -> None:
         """Test --help shows analyze options."""
-        from click.testing import CliRunner
-
-        from llm_fmt.cli import main
-
         runner = CliRunner()
         result = runner.invoke(main, ["--help"])
 

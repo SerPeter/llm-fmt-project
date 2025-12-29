@@ -23,6 +23,7 @@ class DataShape:
     max_depth: int = 0
     is_mostly_primitives: bool = True
     description: str = ""
+    sample_keys: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -49,11 +50,12 @@ class AnalysisReport:
     is_estimated: bool = False
 
 
-def detect_data_shape(data: Any) -> DataShape:  # noqa: ANN401
+def detect_data_shape(data: Any, max_sample: int = 100) -> DataShape:  # noqa: ANN401
     """Detect the shape and structure of data.
 
     Args:
         data: Input data to analyze.
+        max_sample: Maximum items to sample from arrays for efficiency.
 
     Returns:
         DataShape describing the data structure.
@@ -64,23 +66,31 @@ def detect_data_shape(data: Any) -> DataShape:  # noqa: ANN401
         shape.is_array = True
         shape.array_length = len(data)
 
-        if data and all(isinstance(item, dict) for item in data):
+        # Sample large arrays for efficiency
+        sample = data[:max_sample] if len(data) > max_sample else data
+
+        if sample and all(isinstance(item, dict) for item in sample):
             # Check if uniform (all objects have same keys)
-            first_keys = set(data[0].keys())
-            shape.is_uniform_array = all(set(item.keys()) == first_keys for item in data)
+            first_keys = set(sample[0].keys())
+            shape.is_uniform_array = all(set(item.keys()) == first_keys for item in sample)
             shape.field_count = len(first_keys)
+            shape.sample_keys = sorted(first_keys)[:10]  # Store up to 10 sample keys
 
         shape.description = _describe_array(data, shape)
+        shape.max_depth = _calculate_depth_sampled(sample)
+        shape.is_mostly_primitives = _check_mostly_primitives_sampled(sample)
 
     elif isinstance(data, dict):
         shape.field_count = len(data)
+        shape.sample_keys = sorted(data.keys())[:10]
         shape.description = _describe_object(data)
+        shape.max_depth = _calculate_depth(data)
+        shape.is_mostly_primitives = _check_mostly_primitives(data)
 
     else:
         shape.description = f"Primitive value ({type(data).__name__})"
-
-    shape.max_depth = _calculate_depth(data)
-    shape.is_mostly_primitives = _check_mostly_primitives(data)
+        shape.max_depth = 0
+        shape.is_mostly_primitives = True
 
     return shape
 
@@ -127,6 +137,59 @@ def _calculate_depth(data: Any, current: int = 0) -> int:  # noqa: ANN401
         return max(_calculate_depth(item, current + 1) for item in data)
 
     return current
+
+
+def _calculate_depth_sampled(sample: list[Any]) -> int:
+    """Calculate maximum nesting depth for sampled array items.
+
+    Args:
+        sample: Sampled list items to analyze.
+
+    Returns:
+        Maximum depth found in sample (adds 1 for array level).
+    """
+    if not sample:
+        return 1  # Empty array has depth 1
+
+    max_item_depth = max(_calculate_depth(item) for item in sample)
+    return max_item_depth + 1  # Add 1 for the array level itself
+
+
+def _check_mostly_primitives_sampled(sample: list[Any], threshold: float = 0.7) -> bool:
+    """Check if sampled array items are mostly primitive values.
+
+    Args:
+        sample: Sampled list items to analyze.
+        threshold: Ratio threshold for primitive vs complex.
+
+    Returns:
+        True if primitives dominate the sample.
+    """
+    if not sample:
+        return True
+
+    # Check if it's an array of primitives
+    if all(not isinstance(item, (dict, list)) for item in sample):
+        return True
+
+    # For array of objects, check the objects
+    primitive_count = 0
+    complex_count = 0
+
+    for item in sample:
+        if isinstance(item, dict):
+            for value in item.values():
+                if isinstance(value, (dict, list)):
+                    complex_count += 1
+                else:
+                    primitive_count += 1
+        elif isinstance(item, list):
+            complex_count += 1
+        else:
+            primitive_count += 1
+
+    total = primitive_count + complex_count
+    return total == 0 or (primitive_count / total) >= threshold
 
 
 def _check_mostly_primitives(data: Any, threshold: float = 0.7) -> bool:  # noqa: ANN401
@@ -383,6 +446,7 @@ def report_to_dict(report: AnalysisReport) -> dict[str, Any]:
             "field_count": report.data_shape.field_count,
             "max_depth": report.data_shape.max_depth,
             "description": report.data_shape.description,
+            "sample_keys": report.data_shape.sample_keys,
         },
         "recommendation": report.recommendation,
         "recommendation_reason": report.recommendation_reason,
