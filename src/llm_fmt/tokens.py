@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import re
 from functools import lru_cache
+from math import ceil
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import tiktoken
+
+
+# Regex patterns for tokenx-style estimation
+_SEGMENT_PATTERN = re.compile(r"(\s+|[^\s\w]+|\w+)")  # Keep consecutive punctuation together
+_CJK_PATTERN = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]")
+_NUMBER_PATTERN = re.compile(r"^\d+$")
+_PUNCTUATION_PATTERN = re.compile(r"^[^\w\s]+$")
 
 TOKENIZERS = {
     "cl100k_base": "GPT-4, GPT-3.5-turbo, text-embedding-ada-002",
@@ -79,16 +88,68 @@ def count_tokens_safe(text: str, tokenizer: str = DEFAULT_TOKENIZER) -> int | No
         return None
 
 
-def estimate_tokens(text: str) -> int:
-    """Rough token estimate without tiktoken.
+def estimate_tokens(text: str, chars_per_token: float = 4.0) -> int:
+    """Estimate token count using tokenx-style heuristics.
 
-    Rule of thumb: ~4 characters per token for English text.
-    Less accurate but zero dependencies.
+    Uses segment-based analysis for ~94% accuracy compared to full tokenizers.
+    Based on https://github.com/johannschopplich/tokenx algorithm.
+
+    Segment rules:
+    - Whitespace clusters: 0 tokens
+    - CJK characters: 1 token each
+    - Number sequences: 1 token
+    - Short segments (≤3 chars): 1 token
+    - Punctuation: ceil(len / 2) tokens
+    - Alphanumeric: ceil(len / chars_per_token) tokens
 
     Args:
         text: Input text.
+        chars_per_token: Average characters per token for alphanumeric text.
 
     Returns:
         Estimated token count.
     """
-    return len(text) // 4
+    if not text:
+        return 0
+
+    tokens = 0
+    for segment in _SEGMENT_PATTERN.findall(text):
+        tokens += _estimate_segment_tokens(segment, chars_per_token)
+
+    return tokens
+
+
+def _estimate_segment_tokens(segment: str, chars_per_token: float) -> int:
+    """Estimate tokens for a single segment.
+
+    Args:
+        segment: Text segment to estimate.
+        chars_per_token: Average characters per token.
+
+    Returns:
+        Estimated token count for segment.
+    """
+    # Whitespace: 0 tokens
+    if segment.isspace():
+        return 0
+
+    # CJK characters: 1 token each
+    cjk_count = len(_CJK_PATTERN.findall(segment))
+    if cjk_count > 0:
+        non_cjk = len(segment) - cjk_count
+        return cjk_count + (ceil(non_cjk / chars_per_token) if non_cjk > 0 else 0)
+
+    # Numbers: 1 token per sequence
+    if _NUMBER_PATTERN.match(segment):
+        return 1
+
+    # Punctuation: ceil(len / 2) - check before short segments
+    if _PUNCTUATION_PATTERN.match(segment):
+        return ceil(len(segment) / 2)
+
+    # Short alphanumeric segments: 1 token
+    if len(segment) <= 3:  # noqa: PLR2004
+        return 1
+
+    # Long alphanumeric: ceil(len / chars_per_token)
+    return ceil(len(segment) / chars_per_token)

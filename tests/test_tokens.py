@@ -6,13 +6,13 @@ from llm_fmt import tokens
 
 
 class TestEstimateTokens:
-    """Tests for estimate_tokens function (no tiktoken dependency)."""
+    """Tests for estimate_tokens function using tokenx-style heuristics."""
 
     def test_estimate_short_text(self) -> None:
         """Estimate tokens for short text."""
+        # "Hello, this is a test." segments: Hello(1) ,(1) this(1) is(1) a(1) test(1) .(1) = 7
         estimate = tokens.estimate_tokens("Hello, this is a test.")
-        # ~22 chars / 4 = ~5 tokens
-        assert 4 <= estimate <= 10
+        assert 5 <= estimate <= 10
 
     def test_estimate_empty_text(self) -> None:
         """Empty text returns 0 tokens."""
@@ -23,6 +23,56 @@ class TestEstimateTokens:
         short_estimate = tokens.estimate_tokens("Hello")
         long_estimate = tokens.estimate_tokens("Hello " * 100)
         assert long_estimate > short_estimate
+
+    def test_whitespace_zero_tokens(self) -> None:
+        """Whitespace clusters contribute 0 tokens."""
+        # Only whitespace
+        assert tokens.estimate_tokens("   ") == 0
+        assert tokens.estimate_tokens("\n\n\n") == 0
+        assert tokens.estimate_tokens("\t  \n") == 0
+
+    def test_numbers_one_token(self) -> None:
+        """Number sequences are 1 token each."""
+        assert tokens.estimate_tokens("123") == 1
+        assert tokens.estimate_tokens("9999999") == 1
+        # Two separate numbers
+        assert tokens.estimate_tokens("123 456") == 2
+
+    def test_short_words_one_token(self) -> None:
+        """Short words (≤3 chars) are 1 token."""
+        assert tokens.estimate_tokens("a") == 1
+        assert tokens.estimate_tokens("the") == 1
+        assert tokens.estimate_tokens("is") == 1
+
+    def test_punctuation_estimation(self) -> None:
+        """Punctuation uses ceil(len/2) rule."""
+        assert tokens.estimate_tokens(",") == 1
+        assert tokens.estimate_tokens("...") == 2  # ceil(3/2)
+        assert tokens.estimate_tokens("!?!?") == 2  # ceil(4/2)
+
+    def test_cjk_one_token_each(self) -> None:
+        """CJK characters are 1 token each."""
+        assert tokens.estimate_tokens("中") == 1
+        assert tokens.estimate_tokens("中文") == 2
+        assert tokens.estimate_tokens("日本語") == 3
+
+    def test_json_structure(self) -> None:
+        """JSON structure estimation."""
+        json_text = '{"name":"John","age":30}'
+        estimate = tokens.estimate_tokens(json_text)
+        # Should be reasonable for structured data
+        assert 5 <= estimate <= 15
+
+    def test_minified_vs_pretty_json(self) -> None:
+        """Minified JSON should have similar or fewer tokens than pretty."""
+        minified = '{"a":1,"b":2}'
+        pretty = '{\n  "a": 1,\n  "b": 2\n}'
+        # Whitespace is 0 tokens, so pretty might be similar
+        min_est = tokens.estimate_tokens(minified)
+        pretty_est = tokens.estimate_tokens(pretty)
+        # Both should be reasonable
+        assert min_est > 0
+        assert pretty_est >= min_est  # Pretty has same content, whitespace is 0
 
 
 class TestIsAvailable:
