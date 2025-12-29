@@ -9,6 +9,7 @@ from llm_fmt.analyze import (
     detect_data_shape,
     format_report,
     report_to_dict,
+    select_format,
 )
 from llm_fmt.cli import main
 
@@ -321,6 +322,61 @@ class TestReportToDict:
         json_str = json.dumps(d)
         parsed = json.loads(json_str)
         assert parsed["original_tokens"] == d["original_tokens"]
+
+
+class TestSelectFormat:
+    """Tests for select_format function."""
+
+    def test_uniform_array_selects_toon(self) -> None:
+        """Uniform array should select TOON."""
+        data = [{"id": 1}, {"id": 2}]
+        assert select_format(data) == "toon"
+
+    def test_single_item_array_selects_yaml(self) -> None:
+        """Single-item array should not select TOON."""
+        data = [{"id": 1}]
+        assert select_format(data) == "yaml"
+
+    def test_shallow_dict_selects_yaml(self) -> None:
+        """Shallow dict should select YAML."""
+        data = {"name": "test", "value": 123}
+        assert select_format(data) == "yaml"
+
+    def test_deep_nested_selects_json(self) -> None:
+        """Deeply nested structure should select JSON."""
+        data = {"a": {"b": {"c": {"d": 1}}}}
+        assert select_format(data) == "json"
+
+    def test_empty_array_selects_yaml(self) -> None:
+        """Empty array should select YAML."""
+        assert select_format([]) == "yaml"
+
+    def test_empty_object_selects_yaml(self) -> None:
+        """Empty object should select YAML."""
+        assert select_format({}) == "yaml"
+
+    def test_primitive_selects_yaml(self) -> None:
+        """Primitive value should select YAML."""
+        assert select_format("hello") == "yaml"
+        assert select_format(42) == "yaml"
+
+    def test_mixed_array_selects_json(self) -> None:
+        """Non-uniform array with nested values should select JSON."""
+        data = [{"a": 1}, {"b": {"c": 2}}]
+        assert select_format(data) == "json"
+
+    def test_depth_2_with_primitives_selects_yaml(self) -> None:
+        """Depth 2 structure with mostly primitives selects YAML."""
+        # More primitives than complex values (>70% primitives)
+        data = {"config": {"host": "localhost", "port": 5432}, "name": "app", "version": 1}
+        assert select_format(data) == "yaml"
+
+    def test_depth_2_mostly_complex_selects_json(self) -> None:
+        """Depth 2 structure with mostly complex values selects JSON."""
+        # Only one nested object at top level - counts as complex
+        data = {"config": {"host": "localhost", "port": 5432}}
+        # Ratio: 2 primitives / 3 total (including 1 complex) = 66% < 70%
+        assert select_format(data) == "json"
 
 
 class TestAnalyzeCLI:

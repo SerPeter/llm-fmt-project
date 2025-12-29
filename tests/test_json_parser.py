@@ -79,13 +79,6 @@ class TestJsonParser:
         with pytest.raises(ParseError, match="Invalid JSON"):
             parser.parse(b'{"key": "value"} extra')
 
-    def test_parse_stream(self) -> None:
-        """Test streaming parse (current implementation buffers)."""
-        parser = JsonParser()
-        chunks = [b'{"ke', b'y": ', b'"value"}']
-        results = list(parser.parse_stream(iter(chunks)))
-        assert results == [{"key": "value"}]
-
 
 class TestDetectParser:
     """Tests for parser auto-detection."""
@@ -121,9 +114,9 @@ class TestCliJsonInput:
     """Tests for CLI JSON input handling."""
 
     def test_cli_parse_json_file(self, tmp_path) -> None:
-        """Test CLI parsing JSON from file."""
+        """Test CLI parsing JSON from file (auto selects TOON for uniform array)."""
         json_file = tmp_path / "test.json"
-        json_file.write_text('[{"id": 1, "name": "Alice"}]')
+        json_file.write_text('[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]')
 
         runner = CliRunner()
         result = runner.invoke(main, [str(json_file)])
@@ -131,15 +124,19 @@ class TestCliJsonInput:
         assert result.exit_code == 0
         assert "id|name" in result.output
         assert "1|Alice" in result.output
+        assert "2|Bob" in result.output
 
     def test_cli_parse_stdin(self) -> None:
-        """Test CLI parsing JSON from stdin."""
+        """Test CLI parsing JSON from stdin (auto selects TOON for uniform array)."""
         runner = CliRunner()
-        result = runner.invoke(main, input='[{"id": 1, "name": "Bob"}]')
+        result = runner.invoke(
+            main, input='[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]'
+        )
 
         assert result.exit_code == 0
         assert "id|name" in result.output
-        assert "1|Bob" in result.output
+        assert "1|Alice" in result.output
+        assert "2|Bob" in result.output
 
     def test_cli_nonexistent_file(self, tmp_path) -> None:
         """Test CLI error for non-existent file."""

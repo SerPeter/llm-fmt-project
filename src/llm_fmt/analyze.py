@@ -417,6 +417,29 @@ def format_report(report: AnalysisReport, *, use_color: bool = True) -> str:  # 
     return "\n".join(lines)
 
 
+def select_format(data: Any) -> str:  # noqa: ANN401
+    """Select optimal output format based on data shape.
+
+    Args:
+        data: Input data to analyze.
+
+    Returns:
+        Format name (toon, yaml, or json).
+    """
+    shape = detect_data_shape(data)
+
+    # Uniform arrays benefit most from TOON
+    if shape.is_uniform_array and shape.array_length > 1:
+        return "toon"
+
+    # Shallow structures with mostly primitives work well in YAML
+    if shape.max_depth <= 2 and shape.is_mostly_primitives:  # noqa: PLR2004
+        return "yaml"
+
+    # Default to compact JSON for complex structures
+    return "json"
+
+
 def report_to_dict(report: AnalysisReport) -> dict[str, Any]:
     """Convert analysis report to dictionary for JSON output.
 

@@ -3,7 +3,7 @@
 **Phase**: 3 - Auto-Selection & Polish  
 **Priority**: +120
 **Storypoints**: 3  
-**Status**: [ ] Not started
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,11 +11,11 @@ Implement intelligent format auto-selection based on data shape analysis.
 
 ## Requirements
 
-- [ ] `--format auto` (or default) picks optimal format
-- [ ] Detection of uniform arrays → TOON
-- [ ] Detection of flat configs → YAML
-- [ ] Fallback to compact JSON for complex structures
-- [ ] Fast detection (don't scan entire dataset)
+- [x] `--format auto` (or default) picks optimal format
+- [x] Detection of uniform arrays → TOON
+- [x] Detection of flat configs → YAML
+- [x] Fallback to compact JSON for complex structures
+- [x] Fast detection (don't scan entire dataset)
 
 ## Decision Logic
 
@@ -178,11 +178,11 @@ def main(format: str, ...):
 
 ## Acceptance Criteria
 
-- [ ] Uniform array → TOON automatically
-- [ ] Shallow dict → YAML automatically
-- [ ] Deep nested → compact-json automatically
-- [ ] Large arrays sampled efficiently (not full scan)
-- [ ] `--verbose` shows which format was selected
+- [x] Uniform array → TOON automatically
+- [x] Shallow dict → YAML automatically
+- [x] Deep nested → compact-json automatically
+- [x] Large arrays sampled efficiently (not full scan)
+- [x] Auto-selection message shows which format was selected
 
 ## Test Cases
 

@@ -33,13 +33,28 @@ class TestCliHelp:
 class TestCliBasicConversion:
     """Tests for basic conversion."""
 
-    def test_json_to_toon(self, tmp_path) -> None:
-        """Test converting JSON file to TOON."""
+    def test_json_to_toon_auto(self, tmp_path) -> None:
+        """Test auto format selects TOON for uniform arrays."""
         input_file = tmp_path / "test.json"
         input_file.write_text('[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]')
 
         runner = CliRunner()
         result = runner.invoke(main, [str(input_file)])
+
+        assert result.exit_code == 0
+        # Auto selects TOON for uniform arrays
+        assert "Auto-selected format: toon" in result.output
+        assert "id|name" in result.output
+        assert "1|Alice" in result.output
+        assert "2|Bob" in result.output
+
+    def test_json_to_toon_explicit(self, tmp_path) -> None:
+        """Test explicit TOON format conversion."""
+        input_file = tmp_path / "test.json"
+        input_file.write_text('[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]')
+
+        runner = CliRunner()
+        result = runner.invoke(main, [str(input_file), "-f", "toon"])
 
         assert result.exit_code == 0
         assert "id|name" in result.output
@@ -74,9 +89,20 @@ class TestCliStdin:
     """Tests for stdin input."""
 
     def test_stdin_default(self) -> None:
-        """Test reading from stdin when no file specified."""
+        """Test reading from stdin with auto format (shallow object -> YAML)."""
         runner = CliRunner()
         result = runner.invoke(main, input='{"id": 1, "name": "test"}')
+
+        assert result.exit_code == 0
+        # Auto selects YAML for shallow objects
+        assert "Auto-selected format: yaml" in result.output
+        assert "id: 1" in result.output
+        assert "name: test" in result.output
+
+    def test_stdin_explicit_toon(self) -> None:
+        """Test reading from stdin with explicit TOON format."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "toon"], input='{"id": 1, "name": "test"}')
 
         assert result.exit_code == 0
         assert "id|name" in result.output
@@ -349,13 +375,14 @@ class TestCliStdout:
 class TestCliPipeline:
     """Tests simulating shell pipeline usage."""
 
-    def test_pipe_json_to_toon(self) -> None:
-        """Test simulating: echo '{"a":1}' | llm-fmt."""
+    def test_pipe_json_auto_format(self) -> None:
+        """Test simulating: echo '{"a":1}' | llm-fmt (auto selects YAML for flat object)."""
         runner = CliRunner()
         result = runner.invoke(main, input='{"key": "value"}')
 
         assert result.exit_code == 0
-        assert "key" in result.output
+        assert "Auto-selected format: yaml" in result.output
+        assert "key: value" in result.output
 
     def test_pipe_array_to_toon(self) -> None:
         """Test simulating: cat data.json | llm-fmt -f toon."""
@@ -378,6 +405,79 @@ class TestCliPipeline:
         assert result.exit_code == 0
         assert '"name":"test"' in result.output
         assert '"value":123' in result.output
+
+
+class TestCliAutoFormat:
+    """Tests for --format auto (default) selection."""
+
+    def test_auto_uniform_array_selects_toon(self) -> None:
+        """Uniform array should auto-select TOON."""
+        runner = CliRunner()
+        result = runner.invoke(
+            main, input='[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]'
+        )
+
+        assert result.exit_code == 0
+        assert "Auto-selected format: toon" in result.output
+        assert "id|name" in result.output
+
+    def test_auto_shallow_object_selects_yaml(self) -> None:
+        """Shallow object should auto-select YAML."""
+        runner = CliRunner()
+        result = runner.invoke(main, input='{"name": "test", "value": 123}')
+
+        assert result.exit_code == 0
+        assert "Auto-selected format: yaml" in result.output
+        assert "name: test" in result.output
+        assert "value: 123" in result.output
+
+    def test_auto_deep_nested_selects_json(self) -> None:
+        """Deeply nested structure should auto-select JSON."""
+        runner = CliRunner()
+        result = runner.invoke(main, input='{"a": {"b": {"c": {"d": 1}}}}')
+
+        assert result.exit_code == 0
+        assert "Auto-selected format: json" in result.output
+        # Compact JSON output
+        assert '{"a":{"b":{"c":{"d":1}}}}' in result.output
+
+    def test_auto_single_item_array_selects_yaml(self) -> None:
+        """Single-item array should not select TOON (need > 1 items)."""
+        runner = CliRunner()
+        result = runner.invoke(main, input='[{"id": 1}]')
+
+        assert result.exit_code == 0
+        # Single item array - YAML is better than TOON
+        assert "Auto-selected format: yaml" in result.output
+
+    def test_explicit_format_overrides_auto(self) -> None:
+        """Explicit format should override auto-selection."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "json"], input='{"name": "test"}')
+
+        assert result.exit_code == 0
+        # No auto-selection message
+        assert "Auto-selected format" not in result.output
+        assert '{"name":"test"}' in result.output
+
+    def test_auto_with_file_input(self, tmp_path) -> None:
+        """Auto format works with file input."""
+        input_file = tmp_path / "test.json"
+        input_file.write_text('{"config": {"host": "localhost"}}')
+
+        runner = CliRunner()
+        result = runner.invoke(main, [str(input_file)])
+
+        assert result.exit_code == 0
+        assert "Auto-selected format:" in result.output
+
+    def test_help_shows_auto_format(self) -> None:
+        """Help should show auto as default format."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["--help"])
+
+        assert result.exit_code == 0
+        assert "auto" in result.output
 
 
 class TestCliTokenCounting:

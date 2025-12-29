@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 
 from llm_fmt import __version__
-from llm_fmt.analyze import analyze, format_report, report_to_dict
+from llm_fmt.analyze import analyze, format_report, report_to_dict, select_format
 from llm_fmt.errors import EncodeError, ParseError
 from llm_fmt.filters import IncludeFilter, MaxDepthFilter
 from llm_fmt.parsers import JsonParser, YamlParser
@@ -26,9 +26,9 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     "--format",
     "-f",
     "output_format",
-    type=click.Choice(["toon", "json", "yaml"]),
-    default="toon",
-    help="Output format (default: toon).",
+    type=click.Choice(["toon", "json", "yaml", "auto"]),
+    default="auto",
+    help="Output format (default: auto).",
 )
 @click.option(
     "--input-format",
@@ -139,17 +139,26 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
         _run_analysis(data, input_format, filename, tokenizer, output_json, no_color)
         return
 
+    # Determine parser
+    parser = _detect_parser(filename, data) if input_format == "auto" else PARSER_MAP[input_format]()
+
+    # Handle auto format selection
+    actual_format = output_format
+    if output_format == "auto":
+        try:
+            parsed_data = parser.parse(data)
+            actual_format = select_format(parsed_data)
+            click.echo(f"Auto-selected format: {actual_format}", err=True)
+        except ParseError as e:
+            msg = f"Parse error: {e}"
+            raise click.ClickException(msg) from e
+
     # Build pipeline
     builder = PipelineBuilder()
-
-    # Configure parser
-    if input_format == "auto":
-        builder.with_auto_parser(filename=filename, data=data)
-    else:
-        builder.with_parser(PARSER_MAP[input_format]())
+    builder.with_parser(parser)
 
     # Configure encoder
-    builder.with_format(output_format, sort_keys=sort_keys)
+    builder.with_format(actual_format, sort_keys=sort_keys)
 
     # Add filters: all --filter expressions first, then --max-depth last
     for i, pattern in enumerate(include_patterns):
