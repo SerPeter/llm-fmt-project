@@ -167,3 +167,35 @@ class TestTokenizers:
     def test_default_tokenizer(self) -> None:
         """DEFAULT_TOKENIZER is valid."""
         assert tokens.DEFAULT_TOKENIZER in tokens.TOKENIZERS
+
+
+class TestEstimationAccuracy:
+    """Tests comparing estimation accuracy against tiktoken."""
+
+    @pytest.mark.skipif(not tokens.is_available(), reason="tiktoken not installed")
+    def test_estimation_accuracy_english(self) -> None:
+        """Estimation should be within reasonable range for English text."""
+        text = "The quick brown fox jumps over the lazy dog. This is a test sentence."
+        actual = tokens.count_tokens(text)
+        estimated = tokens.estimate_tokens(text)
+        # Should be within 30% of actual
+        assert abs(estimated - actual) / actual < 0.3
+
+    @pytest.mark.skipif(not tokens.is_available(), reason="tiktoken not installed")
+    def test_estimation_accuracy_json(self) -> None:
+        """Estimation should be reasonable for JSON data."""
+        json_text = '{"users":[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]}'
+        actual = tokens.count_tokens(json_text)
+        estimated = tokens.estimate_tokens(json_text)
+        # Structured data tends to over-estimate due to punctuation
+        # Should be within 50% for structured data
+        assert abs(estimated - actual) / actual < 0.5
+
+    @pytest.mark.skipif(not tokens.is_available(), reason="tiktoken not installed")
+    def test_estimation_accuracy_code(self) -> None:
+        """Estimation should be reasonable for code."""
+        code = 'def hello():\n    print("Hello, world!")\n    return True'
+        actual = tokens.count_tokens(code)
+        estimated = tokens.estimate_tokens(code)
+        # Should be within 40% for code
+        assert abs(estimated - actual) / actual < 0.4
