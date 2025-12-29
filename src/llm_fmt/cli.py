@@ -6,49 +6,10 @@ from pathlib import Path
 import click
 
 from llm_fmt import __version__
-from llm_fmt.errors import ConfigurationError, EncodeError, ParseError
+from llm_fmt.errors import EncodeError, ParseError
 from llm_fmt.filters import IncludeFilter, MaxDepthFilter
 from llm_fmt.parsers import JsonParser, YamlParser
 from llm_fmt.pipeline import PipelineBuilder
-
-
-class OrderedCommand(click.Command):
-    """Command that tracks order of filter options."""
-
-    def make_context(
-        self,
-        info_name: str | None,
-        args: list[str],
-        parent: click.Context | None = None,
-        **extra: object,
-    ) -> click.Context:
-        """Create context and track filter order."""
-        ctx = super().make_context(info_name, args, parent, **extra)
-
-        # Track order of filter-related arguments
-        filter_order: list[tuple[str, str]] = []
-        i = 0
-        while i < len(args):
-            arg = args[i]
-            if arg in ("--filter", "-i"):
-                if i + 1 < len(args):
-                    filter_order.append(("include", args[i + 1]))
-                    i += 2
-                    continue
-            elif arg in ("--max-depth", "-d"):
-                if i + 1 < len(args):
-                    filter_order.append(("depth", args[i + 1]))
-                    i += 2
-                    continue
-            elif arg.startswith("--filter="):
-                filter_order.append(("include", arg.split("=", 1)[1]))
-            elif arg.startswith("--max-depth="):
-                filter_order.append(("depth", arg.split("=", 1)[1]))
-            i += 1
-
-        ctx.ensure_object(dict)
-        ctx.obj["filter_order"] = filter_order
-        return ctx
 
 
 PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
@@ -57,33 +18,7 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
 }
 
 
-def _build_filters(
-    builder: PipelineBuilder,
-    filter_order: list[tuple[str, str]],
-) -> ConfigurationError:
-    """Add filters to the pipeline builder.
-
-    Args:
-        builder: Pipeline builder to add filters to.
-        filter_order: List of (filter_type, value) tuples.
-
-    Returns:
-        ConfigurationError with any validation errors (empty if none).
-    """
-    errors = ConfigurationError()
-    for i, (filter_type, value) in enumerate(filter_order):
-        try:
-            if filter_type == "include":
-                builder.add_filter(IncludeFilter(value))
-            elif filter_type == "depth":
-                builder.add_filter(MaxDepthFilter(int(value)))
-        except ValueError as e:
-            location = f"--filter[{i}]" if filter_type == "include" else "--max-depth"
-            errors.add(location, str(e))
-    return errors
-
-
-@click.command(cls=OrderedCommand)
+@click.command()
 @click.version_option(version=__version__, prog_name="llm-fmt")
 @click.option(
     "--format",
@@ -113,7 +48,7 @@ def _build_filters(
     "-d",
     "max_depth",
     type=int,
-    help="Maximum depth to traverse.",
+    help="Maximum depth to traverse (applied after filters).",
 )
 @click.option(
     "--output",
@@ -142,8 +77,8 @@ def main(
     ctx: click.Context,
     output_format: str,
     input_format: str,
-    include_patterns: tuple[str, ...],  # noqa: ARG001
-    max_depth: int | None,  # noqa: ARG001
+    include_patterns: tuple[str, ...],
+    max_depth: int | None,
     output_file: Path | None,
     sort_keys: bool,  # noqa: FBT001
     no_color: bool,  # noqa: ARG001, FBT001
@@ -183,11 +118,20 @@ def main(
     # Configure encoder
     builder.with_format(output_format, sort_keys=sort_keys)
 
-    # Add filters in CLI order
-    filter_order = ctx.obj.get("filter_order", [])
-    errors = _build_filters(builder, filter_order)
-    if errors:
-        raise click.ClickException(str(errors))
+    # Add filters: all --filter expressions first, then --max-depth last
+    for i, pattern in enumerate(include_patterns):
+        try:
+            builder.add_filter(IncludeFilter(pattern))
+        except ValueError as e:
+            msg = f"--filter[{i}]: {e}"
+            raise click.ClickException(msg) from e
+
+    if max_depth is not None:
+        try:
+            builder.add_filter(MaxDepthFilter(max_depth))
+        except ValueError as e:
+            msg = f"--max-depth: {e}"
+            raise click.ClickException(msg) from e
 
     # Run pipeline
     try:

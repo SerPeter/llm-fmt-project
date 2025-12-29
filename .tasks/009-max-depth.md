@@ -3,7 +3,7 @@
 **Phase**: 2 - Filtering & Analysis  
 **Priority**: +100
 **Storypoints**: 3  
-**Status**: [ ] Not started
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,11 +11,11 @@ Implement depth-based truncation to limit nesting levels in output.
 
 ## Requirements
 
-- [ ] `--max-depth N` limits output to N levels of nesting
-- [ ] Depth 0 = only root level keys
-- [ ] Truncated branches show placeholder or summary
-- [ ] Works with all output formats
-- [ ] Applied before format conversion (reduces tokens)
+- [x] `--max-depth N` limits output to N levels of nesting
+- [x] Depth 0 = only root level keys
+- [x] Truncated branches show placeholder or summary
+- [x] Works with all output formats
+- [x] Applied before format conversion (reduces tokens)
 
 ## Implementation Details
 
@@ -150,12 +150,12 @@ With `--max-depth 3`, you get the essential structure without the deep settings.
 
 ## Acceptance Criteria
 
-- [ ] `--max-depth 0` returns only root keys
-- [ ] `--max-depth 1` shows one level of nesting
-- [ ] Truncation markers indicate what's hidden
-- [ ] Works on arrays and objects
-- [ ] Primitives at any depth are preserved
-- [ ] Combined with `--filter` works correctly
+- [x] `--max-depth 0` returns only root keys
+- [x] `--max-depth 1` shows one level of nesting
+- [x] Truncation markers indicate what's hidden
+- [x] Works on arrays and objects
+- [x] Primitives at any depth are preserved
+- [x] Combined with `--filter` works correctly
 
 ## Test Cases
 
@@ -189,15 +189,16 @@ def test_primitives_preserved():
 ```python
 @click.option(
     "--max-depth",
+    "-d",
+    "max_depth",
     type=int,
-    help="Maximum nesting depth (0 = root level only)"
-)
-@click.option(
-    "--strict",
-    is_flag=True,
-    help="Remove deep data instead of showing placeholders"
+    help="Maximum depth to traverse (applied after filters).",
 )
 ```
+
+Note: The `--strict` option (removing deep data instead of showing placeholders) was
+considered but omitted to keep the implementation simple. Placeholders provide better
+visibility into what data was truncated.
 
 ## Notes
 

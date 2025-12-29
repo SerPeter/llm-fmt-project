@@ -148,6 +148,26 @@ class TestMaxDepthFilter:
         result = MaxDepthFilter(5)(data)
         assert result == {"a": 1}
 
+    def test_array_depth(self) -> None:
+        """Test depth limiting within arrays."""
+        data = {"items": [{"nested": {"deep": 1}}]}
+        result = MaxDepthFilter(2)(data)
+        assert result == {"items": [{"nested": {"...": "1 keys"}}]}
+
+    def test_nested_arrays(self) -> None:
+        """Test depth limiting with nested arrays."""
+        data = {"matrix": [[{"value": 1}, {"value": 2}], [{"value": 3}]]}
+        result = MaxDepthFilter(2)(data)
+        assert result == {
+            "matrix": [[{"...": "1 keys"}, {"...": "1 keys"}], [{"...": "1 keys"}]]
+        }
+
+    def test_root_array(self) -> None:
+        """Test depth limiting when root is an array."""
+        data = [{"a": {"b": 1}}, {"a": {"c": 2}}]
+        result = MaxDepthFilter(1)(data)
+        assert result == [{"a": {"...": "1 keys"}}, {"a": {"...": "1 keys"}}]
+
 
 class TestFilterChaining:
     """Tests for chaining multiple filters."""

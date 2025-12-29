@@ -258,6 +258,25 @@ class TestCliFilters:
 
         assert result.exit_code == 0
 
+    def test_filter_and_max_depth_combined(self, tmp_path) -> None:
+        """Test combining --filter and --max-depth works correctly."""
+        input_file = tmp_path / "test.json"
+        input_file.write_text(
+            '{"users": [{"id": 1, "profile": {"name": "Alice", "settings": {"theme": "dark"}}}]}'
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [str(input_file), "-f", "json", "--filter", "users[0].profile", "--max-depth", "0"],
+        )
+
+        assert result.exit_code == 0
+        # Depth 0 on profile should keep primitives but truncate settings
+        assert '"name":"Alice"' in result.output
+        assert '"settings":{' in result.output
+        assert '"...":"1 keys"' in result.output
+
 
 class TestCliNoColor:
     """Tests for --no-color option."""
