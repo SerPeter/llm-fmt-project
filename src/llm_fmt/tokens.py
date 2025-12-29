@@ -17,6 +17,18 @@ _CJK_PATTERN = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30f
 _NUMBER_PATTERN = re.compile(r"^\d+$")
 _PUNCTUATION_PATTERN = re.compile(r"^[^\w\s]+$")
 
+# Common JSON/structured data token patterns (typically 1 token each)
+_JSON_COMMON_TOKENS = frozenset({
+    # 2-char patterns
+    '{"', '"}', '":', ',"', '",', ":[", "],", ":{", "},", "}]", "[{",
+    "{{", "}}", "[[", "]]", "::", ",,", '["', '"]', "..", "--", "==",
+    # 3-char patterns
+    '":"', '"},', '":[', '"]}', '"],', '"}]', "}}}", "{{{", "]}}", '":{',
+    "...", "---", "===", ">>>", "<<<",
+    # 4-char patterns
+    '":{"', '"},"', '"],[', '":["', '"]:"',
+})
+
 TOKENIZERS = {
     "cl100k_base": "GPT-4, GPT-3.5-turbo, text-embedding-ada-002",
     "o200k_base": "GPT-4o, GPT-4o-mini",
@@ -143,13 +155,51 @@ def _estimate_segment_tokens(segment: str, chars_per_token: float) -> int:
     if _NUMBER_PATTERN.match(segment):
         return 1
 
-    # Punctuation: ceil(len / 2) - check before short segments
+    # Punctuation: check for common JSON patterns first
     if _PUNCTUATION_PATTERN.match(segment):
-        return ceil(len(segment) / 2)
+        return _estimate_punctuation_tokens(segment)
 
-    # Short alphanumeric segments: 1 token
-    if len(segment) <= 3:  # noqa: PLR2004
+    # Short alphanumeric segments: 1 token (common words up to ~6 chars)
+    if len(segment) <= 6:  # noqa: PLR2004
         return 1
 
     # Long alphanumeric: ceil(len / chars_per_token)
     return ceil(len(segment) / chars_per_token)
+
+
+def _estimate_punctuation_tokens(segment: str) -> int:
+    """Estimate tokens for punctuation, accounting for common JSON patterns.
+
+    Args:
+        segment: Punctuation-only segment.
+
+    Returns:
+        Estimated token count.
+    """
+    if not segment:
+        return 0
+
+    # Check for exact common token matches
+    if segment in _JSON_COMMON_TOKENS:
+        return 1
+
+    # Try to greedily match common patterns
+    tokens = 0
+    i = 0
+    while i < len(segment):
+        matched = False
+        # Try longer patterns first (4, 3, then 2 chars)
+        for length in (4, 3, 2):
+            if i + length <= len(segment):
+                substr = segment[i : i + length]
+                if substr in _JSON_COMMON_TOKENS:
+                    tokens += 1
+                    i += length
+                    matched = True
+                    break
+        if not matched:
+            # Single punctuation char = 1 token
+            tokens += 1
+            i += 1
+
+    return tokens

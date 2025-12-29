@@ -45,10 +45,11 @@ class TestEstimateTokens:
         assert tokens.estimate_tokens("is") == 1
 
     def test_punctuation_estimation(self) -> None:
-        """Punctuation uses ceil(len/2) rule."""
+        """Punctuation estimation with common patterns."""
         assert tokens.estimate_tokens(",") == 1
-        assert tokens.estimate_tokens("...") == 2  # ceil(3/2)
-        assert tokens.estimate_tokens("!?!?") == 2  # ceil(4/2)
+        assert tokens.estimate_tokens("...") == 1  # Common pattern
+        assert tokens.estimate_tokens("{{") == 1  # JSON pattern
+        assert tokens.estimate_tokens('":"') == 1  # JSON pattern
 
     def test_cjk_one_token_each(self) -> None:
         """CJK characters are 1 token each."""
@@ -187,9 +188,8 @@ class TestEstimationAccuracy:
         json_text = '{"users":[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]}'
         actual = tokens.count_tokens(json_text)
         estimated = tokens.estimate_tokens(json_text)
-        # Structured data tends to over-estimate due to punctuation
-        # Should be within 50% for structured data
-        assert abs(estimated - actual) / actual < 0.5
+        # Should be within 25% for structured data
+        assert abs(estimated - actual) / actual < 0.25
 
     @pytest.mark.skipif(not tokens.is_available(), reason="tiktoken not installed")
     def test_estimation_accuracy_code(self) -> None:
