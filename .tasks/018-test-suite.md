@@ -3,7 +3,7 @@
 **Phase**: 3 - Auto-Selection & Polish  
 **Priority**: -150
 **Storypoints**: 8  
-**Status**: [ ] Not started
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,12 +11,12 @@ Build comprehensive test coverage for all functionality before release.
 
 ## Requirements
 
-- [ ] Unit tests for all format encoders
-- [ ] Unit tests for filtering functions
-- [ ] Integration tests for CLI
-- [ ] Property-based tests with Hypothesis
-- [ ] Test fixtures with realistic data
-- [ ] Coverage target: 90%+
+- [x] Unit tests for all format encoders
+- [x] Unit tests for filtering functions
+- [x] Integration tests for CLI
+- [x] Property-based tests with Hypothesis
+- [x] Test fixtures with realistic data
+- [x] Coverage target: 90%+
 
 ## Test Structure
 
@@ -289,11 +289,11 @@ fail_under = 90
 
 ## Acceptance Criteria
 
-- [ ] All format encoders have unit tests
-- [ ] CLI has integration tests for all options
-- [ ] Edge cases covered (empty, null, special chars)
-- [ ] Property tests validate roundtrip consistency
-- [ ] Coverage ≥90%
+- [x] All format encoders have unit tests
+- [x] CLI has integration tests for all options
+- [x] Edge cases covered (empty, null, special chars)
+- [x] Property tests validate roundtrip consistency
+- [x] Coverage ≥90%
 - [ ] Tests run in CI
 
 ## Dependencies
