@@ -1,11 +1,8 @@
 """YAML input parser."""
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import yaml
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 class YamlParser:
@@ -24,20 +21,3 @@ class YamlParser:
             yaml.YAMLError: If YAML is invalid.
         """
         return yaml.safe_load(data)
-
-    def parse_stream(self, stream: Iterator[bytes]) -> Iterator[Any]:
-        """Streaming YAML parse (future).
-
-        Args:
-            stream: Iterator of byte chunks.
-
-        Yields:
-            Parsed Python objects (one per YAML document).
-
-        Note:
-            Current implementation buffers all chunks.
-            Future: implement true streaming for multi-document YAML.
-        """
-        buffer = b"".join(stream)
-        # YAML supports multiple documents separated by ---
-        yield from yaml.safe_load_all(buffer)

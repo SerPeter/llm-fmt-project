@@ -1,12 +1,9 @@
 """Include filter using JMESPath expressions."""
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import jmespath
 from jmespath.exceptions import JMESPathError
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 class IncludeFilter:
@@ -40,17 +37,3 @@ class IncludeFilter:
         result = self._compiled.search(data)
         # Return original data if expression matches nothing
         return result if result is not None else data
-
-    def apply_stream(self, stream: Iterator[Any]) -> Iterator[Any]:
-        """Streaming include filter.
-
-        Args:
-            stream: Iterator of data items.
-
-        Yields:
-            Filtered data items (skips None results).
-        """
-        for item in stream:
-            result = self._compiled.search(item)
-            if result is not None:
-                yield result

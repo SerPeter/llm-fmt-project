@@ -127,4 +127,3 @@ def test_stdout_encoding():
 - Click's `CliRunner` simulates stdin for testing
 - `sys.stdin.buffer` gives raw bytes, `sys.stdin` gives text
 - Consider `--input-encoding` flag for non-UTF-8 files (later)
-- Large files: may need streaming instead of `read()`

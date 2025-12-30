@@ -68,7 +68,6 @@ Phase 5: Ecosystem Integration             ~20 SP (partially specified)
 | XML input support | [021-xml-input.md](.tasks/021-xml-input.md) | +40 | 5 |
 | Truncation strategies | [022-truncation.md](.tasks/022-truncation.md) | +100 | 5 |
 | Rust core via PyO3 | [023-rust-core.md](.tasks/023-rust-core.md) | +80 | 13 |
-| Streaming large files | [024-streaming.md](.tasks/024-streaming.md) | +60 | 5 |
 | Benchmarking suite | [025-benchmarks.md](.tasks/025-benchmarks.md) | -50 | 3 |
 
 **Milestone**: v0.2.0 with YAML/XML input, optional Rust backend

@@ -98,10 +98,6 @@ class Filter(Protocol):
         """Transform data."""
         ...
 
-    def apply_stream(self, data: Iterator[Any]) -> Iterator[Any]:
-        """Streaming transform (future)."""
-        ...
-
 class FilterChain:
     def __init__(self, filters: list[Filter]):
         self.filters = filters
@@ -131,10 +127,6 @@ class Encoder(Protocol):
     def encode(self, data: Any) -> str:
         """Encode to output format."""
         ...
-
-    def encode_stream(self, data: Iterator[Any]) -> Iterator[str]:
-        """Streaming encode (future)."""
-        ...
 ```
 
 ### Available Encoders
@@ -146,23 +138,17 @@ class Encoder(Protocol):
 | YAML | 20-40% | Human-readable, nested data |
 | Compact JSON | 10-20% | Compatibility, any structure |
 
-## Core Protocols (Streaming-Ready)
-
-All protocols include both batch and streaming interfaces. The streaming interface is prepared for future implementation.
+## Core Protocols
 
 ### Parser Protocol
 
 ```python
-from typing import Protocol, Iterator, Any
+from typing import Protocol, Any
 from pathlib import Path
 
 class Parser(Protocol):
     def parse(self, data: bytes) -> Any:
         """Parse bytes into Python object."""
-        ...
-
-    def parse_stream(self, stream: Iterator[bytes]) -> Iterator[Any]:
-        """Streaming parse (future)."""
         ...
 
 def detect_parser(filename: Path | None, data: bytes | None) -> Parser:
@@ -174,7 +160,7 @@ def detect_parser(filename: Path | None, data: bytes | None) -> Parser:
 
 ```python
 from dataclasses import dataclass
-from typing import Any, Iterator
+from typing import Any
 
 @dataclass
 class Pipeline:
@@ -186,12 +172,6 @@ class Pipeline:
         data = self.parser.parse(input_data)
         data = self.filters.apply(data)
         return self.encoder.encode(data)
-
-    # Future: streaming version
-    def run_stream(self, input_stream: Iterator[bytes]) -> Iterator[str]:
-        data = self.parser.parse_stream(input_stream)
-        data = self.filters.apply_stream(data)
-        return self.encoder.encode_stream(data)
 ```
 
 ## Error Handling
@@ -251,10 +231,6 @@ cat data.json | llm-fmt
 ### Query Plan Optimization
 
 Currently filters are applied in CLI argument order. A future optimization could analyze the filter chain and data characteristics to determine optimal execution order, similar to database query planners.
-
-### Streaming Support
-
-All protocols include `*_stream` methods for future streaming implementation. This will enable processing of large files without loading entirely into memory.
 
 ### Additional Input Formats
 

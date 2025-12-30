@@ -9,7 +9,6 @@ from llm_fmt.filters import Filter, FilterChain
 from llm_fmt.parsers import Parser, detect_parser
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from pathlib import Path
 
 
@@ -48,19 +47,6 @@ class Pipeline:
             return self.encoder.encode(filtered)
         except Exception as e:
             raise EncodeError(str(e)) from e
-
-    def run_stream(self, stream: Iterator[bytes]) -> Iterator[str]:
-        """Streaming pipeline (future).
-
-        Args:
-            stream: Iterator of input byte chunks.
-
-        Yields:
-            Encoded output string chunks.
-        """
-        parsed = self.parser.parse_stream(stream)
-        filtered = self.filters.apply_stream(parsed)
-        yield from self.encoder.encode_stream(filtered)
 
 
 class PipelineBuilder:

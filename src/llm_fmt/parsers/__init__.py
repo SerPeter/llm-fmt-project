@@ -6,7 +6,6 @@ from llm_fmt.parsers.json_parser import JsonParser
 from llm_fmt.parsers.yaml_parser import YamlParser
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
     from pathlib import Path
 
 __all__ = ["JsonParser", "Parser", "YamlParser", "detect_parser"]
@@ -30,17 +29,6 @@ class Parser(Protocol):
 
         Returns:
             Parsed Python object (dict, list, etc.).
-        """
-        ...
-
-    def parse_stream(self, stream: Iterator[bytes]) -> Iterator[Any]:
-        """Streaming parse (future).
-
-        Args:
-            stream: Iterator of byte chunks.
-
-        Yields:
-            Parsed Python objects.
         """
         ...
 

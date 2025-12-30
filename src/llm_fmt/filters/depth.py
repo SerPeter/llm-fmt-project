@@ -1,10 +1,7 @@
 """Max depth filter for limiting data nesting."""
 
 import copy
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
+from typing import Any
 
 
 class MaxDepthFilter:
@@ -69,15 +66,3 @@ class MaxDepthFilter:
         if isinstance(value, list):
             return [f"... {len(value)} items"]
         return value
-
-    def apply_stream(self, stream: Iterator[Any]) -> Iterator[Any]:
-        """Streaming depth filter.
-
-        Args:
-            stream: Iterator of data items.
-
-        Yields:
-            Depth-limited data items.
-        """
-        for item in stream:
-            yield self(item)

@@ -206,4 +206,3 @@ def test_escaping():
 - TOON v2.0 spec: https://toonformat.dev
 - Tabular format saves 30-60% tokens on uniform arrays
 - Non-uniform arrays fall back to simple list format
-- Consider streaming output for very large arrays

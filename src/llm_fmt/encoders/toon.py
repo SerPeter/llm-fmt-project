@@ -11,14 +11,11 @@ Format:
     Nested structures are JSON-encoded inline
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import orjson
 
 from llm_fmt.errors import EncodeError
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 class ToonEncoder:
@@ -194,32 +191,3 @@ class ToonEncoder:
             s = s.replace("\n", "\\n")
             s = s.replace("\r", "\\r")
         return s
-
-    def encode_stream(self, stream: Iterator[Any]) -> Iterator[str]:
-        """Streaming TOON encode.
-
-        Args:
-            stream: Iterator of data items (should be list of dicts).
-
-        Yields:
-            TOON-formatted lines.
-
-        Note:
-            For streaming, assumes first item determines the schema.
-        """
-        first = True
-        keys: list[str] = []
-
-        for stream_item in stream:
-            items = stream_item if isinstance(stream_item, list) else [stream_item]
-
-            for record in items:
-                if not isinstance(record, dict):
-                    continue
-
-                if first:
-                    keys = list(record.keys())
-                    yield self._encode_header(keys)
-                    first = False
-
-                yield self._encode_row(keys, record)

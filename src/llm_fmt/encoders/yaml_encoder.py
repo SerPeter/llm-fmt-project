@@ -4,12 +4,9 @@ Produces clean YAML output for human-readable token-efficient format.
 Uses block style for readability and literal block style for multi-line strings.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import yaml
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 
 class _CleanYamlDumper(yaml.SafeDumper):
@@ -73,24 +70,3 @@ class YamlEncoder:
             sort_keys=False,
             width=1000,  # Prevent line wrapping
         )
-
-    def encode_stream(self, stream: Iterator[Any]) -> Iterator[str]:
-        """Streaming YAML encode.
-
-        Args:
-            stream: Iterator of data items.
-
-        Yields:
-            YAML-encoded strings (one document per item).
-        """
-        for item in stream:
-            yield "---\n"
-            yield yaml.dump(
-                item,
-                Dumper=_CleanYamlDumper,
-                default_flow_style=False,
-                indent=self._indent,
-                allow_unicode=True,
-                sort_keys=False,
-                width=1000,
-            )

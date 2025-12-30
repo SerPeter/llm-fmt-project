@@ -69,7 +69,7 @@ Task files in `.tasks/` contain detailed specifications:
 - **Phase 1** (001-007): MVP - core format conversion
 - **Phase 2** (008-012): Filtering and token analysis
 - **Phase 3** (013-019): Auto-format selection, tests, PyPI release
-- **Phase 4** (020-025): YAML/XML input, Rust acceleration, streaming
+- **Phase 4** (020-023, 025): YAML/XML input, Rust acceleration
 - **Phase 5** (026-030): LangChain/LlamaIndex/MCP integrations
 
 ## Code Style

@@ -13,7 +13,6 @@ Implement fast, robust JSON input parsing using orjson.
 
 - [ ] Parse JSON from file path argument
 - [ ] Parse JSON from stdin (pipe support)
-- [ ] Handle large files efficiently (streaming consideration)
 - [ ] Provide clear error messages for invalid JSON
 - [ ] Support both objects and arrays as root elements
 
