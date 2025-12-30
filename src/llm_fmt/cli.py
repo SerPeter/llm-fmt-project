@@ -2,6 +2,7 @@
 
 import json
 import sys
+import traceback
 from pathlib import Path
 
 import click
@@ -9,7 +10,7 @@ import click
 from llm_fmt import __version__
 from llm_fmt.analyze import analyze, format_report, report_to_dict, select_format
 from llm_fmt.config import load_config
-from llm_fmt.errors import ConfigError, EncodeError, ParseError
+from llm_fmt.errors import ConfigError, InputError, LLMFmtError, OutputError
 from llm_fmt.filters import IncludeFilter, MaxDepthFilter
 from llm_fmt.parsers import JsonParser, YamlParser
 from llm_fmt.pipeline import PipelineBuilder
@@ -100,13 +101,92 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     is_flag=True,
     help="Output analysis in JSON format (only with --analyze).",
 )
+@click.option(
+    "--debug",
+    is_flag=True,
+    help="Show full traceback on errors.",
+)
 @click.argument(
     "input_file",
     type=click.Path(path_type=Path),
     required=False,
 )
 @click.pass_context
-def main(  # noqa: PLR0912, PLR0913, PLR0915
+def main(  # noqa: PLR0913
+    ctx: click.Context,
+    config_path: Path | None,
+    output_format: str | None,
+    input_format: str,
+    include_patterns: tuple[str, ...],
+    max_depth: int | None,
+    output_file: Path | None,
+    sort_keys: bool,  # noqa: FBT001
+    no_color: bool,  # noqa: FBT001
+    count_tokens: bool,  # noqa: FBT001
+    tokenizer: str | None,
+    analyze: bool,  # noqa: FBT001
+    output_json: bool,  # noqa: FBT001
+    debug: bool,  # noqa: FBT001
+    input_file: Path | None,
+) -> None:
+    """Convert JSON/YAML/XML to token-efficient formats for LLM contexts.
+
+    Supports TOON, compact JSON, YAML, and TSV output formats.
+    Reduces token consumption by 30-60% when passing structured data to LLMs.
+
+    Filters use JMESPath syntax (e.g., users[*].email, items[?active]).
+    """
+    # Store debug flag in context for error handling
+    ctx.ensure_object(dict)
+    ctx.obj["debug"] = debug
+
+    try:
+        _run_main(
+            ctx=ctx,
+            config_path=config_path,
+            output_format=output_format,
+            input_format=input_format,
+            include_patterns=include_patterns,
+            max_depth=max_depth,
+            output_file=output_file,
+            sort_keys=sort_keys,
+            no_color=no_color,
+            count_tokens=count_tokens,
+            tokenizer=tokenizer,
+            analyze=analyze,
+            output_json=output_json,
+            input_file=input_file,
+        )
+    except LLMFmtError as e:
+        _handle_error(ctx, e)
+    except Exception as e:
+        # Catch unexpected errors
+        if debug:
+            raise
+        click.echo(f"Error: {e}", err=True)
+        ctx.exit(1)
+
+
+def _handle_error(ctx: click.Context, error: LLMFmtError) -> None:
+    """Handle LLMFmtError exceptions with proper exit codes.
+
+    Args:
+        ctx: Click context.
+        error: The error to handle.
+    """
+    debug = ctx.obj.get("debug", False) if ctx.obj else False
+
+    if debug:
+        # Show full traceback in debug mode
+        click.echo(traceback.format_exc(), err=True)
+    else:
+        # Show clean error message
+        click.echo(f"Error: {error}", err=True)
+
+    ctx.exit(error.exit_code)
+
+
+def _run_main(  # noqa: PLR0912, PLR0913, PLR0915
     ctx: click.Context,
     config_path: Path | None,
     output_format: str | None,
@@ -122,19 +202,26 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
     output_json: bool,  # noqa: FBT001
     input_file: Path | None,
 ) -> None:
-    """Convert JSON/YAML/XML to token-efficient formats for LLM contexts.
+    """Main CLI logic.
 
-    Supports TOON, compact JSON, YAML, and TSV output formats.
-    Reduces token consumption by 30-60% when passing structured data to LLMs.
-
-    Filters use JMESPath syntax (e.g., users[*].email, items[?active]).
+    Args:
+        ctx: Click context.
+        config_path: Path to config file.
+        output_format: Output format (toon, json, yaml, tsv, auto).
+        input_format: Input format (json, yaml, auto).
+        include_patterns: JMESPath filter patterns.
+        max_depth: Maximum depth to traverse.
+        output_file: Output file path.
+        sort_keys: Sort object keys alphabetically.
+        no_color: Disable colored output.
+        count_tokens: Show token count.
+        tokenizer: Tokenizer name.
+        analyze: Run analysis mode.
+        output_json: Output analysis as JSON.
+        input_file: Input file path.
     """
     # Load configuration
-    try:
-        config = load_config(config_path)
-    except ConfigError as e:
-        msg = str(e)
-        raise click.ClickException(msg) from e
+    config = load_config(config_path)
 
     # Apply config defaults for unset CLI options
     effective_format = output_format if output_format is not None else config.format
@@ -154,8 +241,12 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
     else:
         if not input_file.exists():
             msg = f"File not found: {input_file}"
-            raise click.ClickException(msg)
-        data = input_file.read_bytes()
+            raise InputError(msg)
+        try:
+            data = input_file.read_bytes()
+        except OSError as e:
+            msg = f"Cannot read file: {input_file}: {e}"
+            raise InputError(msg) from e
         filename = input_file
 
     # Analysis mode
@@ -171,13 +262,9 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
     # Handle auto format selection
     actual_format = effective_format
     if effective_format == "auto":
-        try:
-            parsed_data = parser.parse(data)
-            actual_format = select_format(parsed_data)
-            click.echo(f"Auto-selected format: {actual_format}", err=True)
-        except ParseError as e:
-            msg = f"Parse error: {e}"
-            raise click.ClickException(msg) from e
+        parsed_data = parser.parse(data)
+        actual_format = select_format(parsed_data)
+        click.echo(f"Auto-selected format: {actual_format}", err=True)
 
     # Build pipeline
     builder = PipelineBuilder()
@@ -192,41 +279,38 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
             builder.add_filter(IncludeFilter(pattern))
         except ValueError as e:
             msg = f"--filter[{i}]: {e}"
-            raise click.ClickException(msg) from e
+            raise ConfigError(msg) from e
 
     if effective_max_depth is not None:
         try:
             builder.add_filter(MaxDepthFilter(effective_max_depth))
         except ValueError as e:
             msg = f"--max-depth: {e}"
-            raise click.ClickException(msg) from e
+            raise ConfigError(msg) from e
 
     # Run pipeline
-    try:
-        pipeline = builder.build()
-        result = pipeline.run(data)
+    pipeline = builder.build()
+    result = pipeline.run(data)
 
-        # Output to file or stdout
-        if output_file:
+    # Output to file or stdout
+    if output_file:
+        try:
             output_file.write_text(result, encoding="utf-8")
-            click.echo(f"Written to {output_file}", err=True)
-        else:
-            click.echo(result, nl=False)
+        except OSError as e:
+            msg = f"Cannot write file: {output_file}: {e}"
+            raise OutputError(msg) from e
+        click.echo(f"Written to {output_file}", err=True)
+    else:
+        click.echo(result, nl=False)
 
-        # Token counting
-        if count_tokens:
-            token_count = count_tokens_safe(result, effective_tokenizer)
-            if token_count is not None:
-                click.echo(f"Tokens ({effective_tokenizer}): {token_count}", err=True)
-            else:
-                estimated = estimate_tokens(result)
-                click.echo(f"Tokens (estimated): ~{estimated}", err=True)
-    except ParseError as e:
-        msg = f"Parse error: {e}"
-        raise click.ClickException(msg) from e
-    except EncodeError as e:
-        msg = f"Encode error: {e}"
-        raise click.ClickException(msg) from e
+    # Token counting
+    if count_tokens:
+        token_count = count_tokens_safe(result, effective_tokenizer)
+        if token_count is not None:
+            click.echo(f"Tokens ({effective_tokenizer}): {token_count}", err=True)
+        else:
+            estimated = estimate_tokens(result)
+            click.echo(f"Tokens (estimated): ~{estimated}", err=True)
 
 
 def _run_analysis(
@@ -249,12 +333,7 @@ def _run_analysis(
     """
     # Parse input to get Python object
     parser = _detect_parser(filename, data) if input_format == "auto" else PARSER_MAP[input_format]()
-
-    try:
-        parsed_data = parser.parse(data)
-    except ParseError as e:
-        msg = f"Parse error: {e}"
-        raise click.ClickException(msg) from e
+    parsed_data = parser.parse(data)
 
     # Run analysis
     report = analyze(parsed_data, tokenizer)

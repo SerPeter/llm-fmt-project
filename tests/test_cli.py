@@ -213,7 +213,7 @@ class TestCliErrors:
         runner = CliRunner()
         result = runner.invoke(main, [str(tmp_path / "nonexistent.json")])
 
-        assert result.exit_code != 0
+        assert result.exit_code == 2  # Input error exit code
         assert "File not found" in result.output
 
     def test_invalid_json(self, tmp_path) -> None:
@@ -224,8 +224,52 @@ class TestCliErrors:
         runner = CliRunner()
         result = runner.invoke(main, [str(input_file)])
 
-        assert result.exit_code != 0
-        assert "Parse error" in result.output or "Error" in result.output
+        assert result.exit_code == 2  # Parse error exit code
+        assert "Error" in result.output
+
+    def test_tsv_non_tabular_error(self) -> None:
+        """Test TSV format with non-tabular data returns exit code 1."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["-f", "tsv"], input='{"key": "value"}')
+
+        assert result.exit_code == 1  # Encode error exit code
+        assert "Error" in result.output
+
+    def test_error_message_clean(self, tmp_path) -> None:
+        """Test error message without traceback by default."""
+        runner = CliRunner()
+        result = runner.invoke(main, [str(tmp_path / "nonexistent.json")])
+
+        assert "Error:" in result.output
+        assert "Traceback" not in result.output
+
+    def test_debug_flag_shows_traceback(self, tmp_path) -> None:
+        """Test --debug shows full traceback."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["--debug", str(tmp_path / "nonexistent.json")])
+
+        assert result.exit_code == 2
+        assert "Traceback" in result.output
+        assert "InputError" in result.output
+
+    def test_debug_flag_with_parse_error(self, tmp_path) -> None:
+        """Test --debug with parse error shows traceback."""
+        input_file = tmp_path / "test.json"
+        input_file.write_text("{invalid}")
+
+        runner = CliRunner()
+        result = runner.invoke(main, ["--debug", str(input_file)])
+
+        assert result.exit_code == 2
+        assert "Traceback" in result.output
+
+    def test_help_shows_debug_option(self) -> None:
+        """Test --help shows --debug option."""
+        runner = CliRunner()
+        result = runner.invoke(main, ["--help"])
+
+        assert result.exit_code == 0
+        assert "--debug" in result.output
 
 
 class TestCliInputFormat:

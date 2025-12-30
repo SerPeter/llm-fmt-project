@@ -1,9 +1,9 @@
 # Task 016: Error Handling & Validation
 
-**Phase**: 3 - Auto-Selection & Polish  
+**Phase**: 3 - Auto-Selection & Polish
 **Priority**: -100
-**Storypoints**: 3  
-**Status**: [ ] Not started
+**Storypoints**: 3
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,11 +11,11 @@ Implement comprehensive error handling with helpful messages.
 
 ## Requirements
 
-- [ ] Clear error messages for all failure modes
-- [ ] Exit codes: 0 (success), 1 (error), 2 (invalid input)
-- [ ] Validate filter patterns before applying
-- [ ] Handle encoding issues gracefully
-- [ ] Log warnings for non-fatal issues
+- [x] Clear error messages for all failure modes
+- [x] Exit codes: 0 (success), 1 (error), 2 (invalid input)
+- [x] Validate filter patterns before applying
+- [x] Handle encoding issues gracefully
+- [x] Log warnings for non-fatal issues
 
 ## Error Categories
 
@@ -46,7 +46,7 @@ class FormatError(LLMFmtError):
 
 ## Acceptance Criteria
 
-- [ ] All errors show helpful messages
-- [ ] Exit codes are consistent
-- [ ] No stack traces in normal use
-- [ ] `--debug` flag shows full traceback
+- [x] All errors show helpful messages
+- [x] Exit codes are consistent
+- [x] No stack traces in normal use
+- [x] `--debug` flag shows full traceback

@@ -1,6 +1,16 @@
 """Tests for error types."""
 
-from llm_fmt.errors import ConfigurationError, EncodeError, ParseError, ValidationError
+from llm_fmt.errors import (
+    ConfigError,
+    ConfigurationError,
+    EncodeError,
+    FilterError,
+    InputError,
+    LLMFmtError,
+    OutputError,
+    ParseError,
+    ValidationError,
+)
 
 
 class TestValidationError:
@@ -79,3 +89,84 @@ class TestEncodeError:
         """Error with format prefixes message."""
         error = EncodeError("Unsupported type", format_name="toon")
         assert str(error) == "toon: Unsupported type"
+
+
+class TestLLMFmtError:
+    """Tests for LLMFmtError base class."""
+
+    def test_default_exit_code(self) -> None:
+        """Base error has exit code 1."""
+        error = LLMFmtError("test error")
+        assert error.exit_code == 1
+
+    def test_is_exception(self) -> None:
+        """LLMFmtError is an Exception."""
+        error = LLMFmtError("test")
+        assert isinstance(error, Exception)
+
+
+class TestExitCodes:
+    """Tests for exit codes on all error types."""
+
+    def test_parse_error_exit_code(self) -> None:
+        """ParseError has exit code 2 (input error)."""
+        error = ParseError("Invalid JSON")
+        assert error.exit_code == 2
+
+    def test_input_error_exit_code(self) -> None:
+        """InputError has exit code 2."""
+        error = InputError("File not found")
+        assert error.exit_code == 2
+
+    def test_config_error_exit_code(self) -> None:
+        """ConfigError has exit code 2."""
+        error = ConfigError("Invalid config")
+        assert error.exit_code == 2
+
+    def test_configuration_error_exit_code(self) -> None:
+        """ConfigurationError has exit code 2."""
+        error = ConfigurationError()
+        assert error.exit_code == 2
+
+    def test_encode_error_exit_code(self) -> None:
+        """EncodeError has exit code 1."""
+        error = EncodeError("Cannot encode")
+        assert error.exit_code == 1
+
+    def test_filter_error_exit_code(self) -> None:
+        """FilterError has exit code 1."""
+        error = FilterError("Invalid filter")
+        assert error.exit_code == 1
+
+    def test_output_error_exit_code(self) -> None:
+        """OutputError has exit code 1."""
+        error = OutputError("Cannot write")
+        assert error.exit_code == 1
+
+
+class TestErrorInheritance:
+    """Tests for error inheritance from LLMFmtError."""
+
+    def test_parse_error_inherits_base(self) -> None:
+        """ParseError inherits from LLMFmtError."""
+        assert issubclass(ParseError, LLMFmtError)
+
+    def test_input_error_inherits_base(self) -> None:
+        """InputError inherits from LLMFmtError."""
+        assert issubclass(InputError, LLMFmtError)
+
+    def test_config_error_inherits_base(self) -> None:
+        """ConfigError inherits from LLMFmtError."""
+        assert issubclass(ConfigError, LLMFmtError)
+
+    def test_encode_error_inherits_base(self) -> None:
+        """EncodeError inherits from LLMFmtError."""
+        assert issubclass(EncodeError, LLMFmtError)
+
+    def test_filter_error_inherits_base(self) -> None:
+        """FilterError inherits from LLMFmtError."""
+        assert issubclass(FilterError, LLMFmtError)
+
+    def test_output_error_inherits_base(self) -> None:
+        """OutputError inherits from LLMFmtError."""
+        assert issubclass(OutputError, LLMFmtError)

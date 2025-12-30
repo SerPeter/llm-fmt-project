@@ -1,6 +1,22 @@
-"""Error types and validation utilities."""
+"""Error types and validation utilities.
+
+Exit codes:
+    0: Success
+    1: General error (encoding, format, runtime errors)
+    2: Input error (file not found, parse error, invalid input)
+"""
 
 from dataclasses import dataclass, field
+
+
+class LLMFmtError(Exception):
+    """Base exception for llm-fmt.
+
+    All llm-fmt exceptions should inherit from this class.
+    The exit_code attribute determines the CLI exit code.
+    """
+
+    exit_code: int = 1
 
 
 @dataclass
@@ -16,13 +32,14 @@ class ValidationError:
 
 
 @dataclass
-class ConfigurationError(Exception):
+class ConfigurationError(LLMFmtError):
     """Raised when CLI configuration is invalid.
 
     Collects multiple validation errors to report all issues at once.
     """
 
     errors: list[ValidationError] = field(default_factory=list)
+    exit_code: int = field(default=2, init=False)
 
     def __str__(self) -> str:
         """Format all errors, one per line."""
@@ -46,8 +63,10 @@ class ConfigurationError(Exception):
         return len(self.errors) > 0
 
 
-class ParseError(Exception):
+class ParseError(LLMFmtError):
     """Raised when input parsing fails."""
+
+    exit_code = 2
 
     def __init__(self, message: str, source: str | None = None) -> None:
         """Initialize parse error.
@@ -66,12 +85,16 @@ class ParseError(Exception):
         return super().__str__()
 
 
-class FilterError(Exception):
+class FilterError(LLMFmtError):
     """Raised when a filter operation fails."""
 
+    exit_code = 1
 
-class EncodeError(Exception):
+
+class EncodeError(LLMFmtError):
     """Raised when encoding fails."""
+
+    exit_code = 1
 
     def __init__(self, message: str, format_name: str | None = None) -> None:
         """Initialize encode error.
@@ -90,5 +113,19 @@ class EncodeError(Exception):
         return super().__str__()
 
 
-class ConfigError(Exception):
+class ConfigError(LLMFmtError):
     """Raised when configuration file is invalid or missing."""
+
+    exit_code = 2
+
+
+class InputError(LLMFmtError):
+    """Raised when input file cannot be read (file not found, permission denied)."""
+
+    exit_code = 2
+
+
+class OutputError(LLMFmtError):
+    """Raised when output cannot be written."""
+
+    exit_code = 1
