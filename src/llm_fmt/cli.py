@@ -12,13 +12,15 @@ from llm_fmt.analyze import analyze, format_report, report_to_dict, select_forma
 from llm_fmt.config import load_config
 from llm_fmt.errors import ConfigError, InputError, LLMFmtError, OutputError
 from llm_fmt.filters import IncludeFilter, MaxDepthFilter
-from llm_fmt.parsers import JsonParser, YamlParser
+from llm_fmt.parsers import CsvParser, JsonParser, XmlParser, YamlParser
 from llm_fmt.pipeline import PipelineBuilder
 from llm_fmt.tokens import TOKENIZERS, count_tokens_safe, estimate_tokens
 
-PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
+PARSER_MAP: dict[str, type[JsonParser | YamlParser | XmlParser | CsvParser]] = {
     "json": JsonParser,
     "yaml": YamlParser,
+    "xml": XmlParser,
+    "csv": CsvParser,
 }
 
 
@@ -35,7 +37,7 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     "--format",
     "-f",
     "output_format",
-    type=click.Choice(["toon", "json", "yaml", "tsv", "auto"]),
+    type=click.Choice(["toon", "json", "yaml", "tsv", "csv", "auto"]),
     default=None,
     help="Output format (default: auto or from config).",
 )
@@ -43,7 +45,7 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     "--input-format",
     "-F",
     "input_format",
-    type=click.Choice(["json", "yaml", "auto"]),
+    type=click.Choice(["json", "yaml", "xml", "csv", "auto"]),
     default="auto",
     help="Input format (default: auto-detect).",
 )
@@ -345,7 +347,9 @@ def _run_analysis(
         click.echo(format_report(report, use_color=not no_color))
 
 
-def _detect_parser(filename: Path | None, data: bytes) -> JsonParser | YamlParser:
+def _detect_parser(
+    filename: Path | None, data: bytes
+) -> JsonParser | YamlParser | XmlParser | CsvParser:
     """Detect parser based on filename or content.
 
     Args:
@@ -362,11 +366,19 @@ def _detect_parser(filename: Path | None, data: bytes) -> JsonParser | YamlParse
             return JsonParser()
         if suffix in {".yaml", ".yml"}:
             return YamlParser()
+        if suffix == ".xml":
+            return XmlParser()
+        if suffix == ".csv":
+            return CsvParser()
+        if suffix == ".tsv":
+            return CsvParser(delimiter="\t")
 
     # Try to detect from content
     text = data.decode("utf-8", errors="replace").strip()
     if text.startswith(("{", "[")):
         return JsonParser()
+    if text.startswith(("<?xml", "<")):
+        return XmlParser()
 
     # Default to YAML (it can parse most JSON too)
     return YamlParser()

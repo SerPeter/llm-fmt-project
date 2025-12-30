@@ -2,18 +2,23 @@
 
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from llm_fmt.parsers.csv_parser import CsvParser
 from llm_fmt.parsers.json_parser import JsonParser
+from llm_fmt.parsers.xml_parser import XmlParser
 from llm_fmt.parsers.yaml_parser import YamlParser
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-__all__ = ["JsonParser", "Parser", "YamlParser", "detect_parser"]
+__all__ = ["CsvParser", "JsonParser", "Parser", "XmlParser", "YamlParser", "detect_parser"]
 
 EXTENSION_MAP: dict[str, type[Parser]] = {
     ".json": JsonParser,
     ".yaml": YamlParser,
     ".yml": YamlParser,
+    ".xml": XmlParser,
+    ".csv": CsvParser,
+    ".tsv": CsvParser,  # TSV is CSV with tab delimiter - handled via auto-detect
 }
 
 
@@ -52,6 +57,8 @@ def detect_parser(
     # Try extension first
     if filename is not None:
         suffix = filename.suffix.lower()
+        if suffix == ".tsv":
+            return CsvParser(delimiter="\t")
         if suffix in EXTENSION_MAP:
             return EXTENSION_MAP[suffix]()
 
@@ -61,8 +68,7 @@ def detect_parser(
         if stripped.startswith((b"{", b"[")):
             return JsonParser()
         if stripped.startswith((b"<?xml", b"<")):
-            msg = "XML parsing not yet implemented"
-            raise NotImplementedError(msg)
+            return XmlParser()
         # Default to YAML (superset of JSON)
         return YamlParser()
 

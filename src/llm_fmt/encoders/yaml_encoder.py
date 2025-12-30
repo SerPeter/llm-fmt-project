@@ -68,5 +68,5 @@ class YamlEncoder:
             indent=self._indent,
             allow_unicode=True,
             sort_keys=False,
-            width=1000,  # Prevent line wrapping
+            width=9999,  # Prevent line wrapping
         )

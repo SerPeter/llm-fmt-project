@@ -22,6 +22,7 @@ dependencies = [
     "orjson>=3.10",
     "pyyaml>=6.0",
     "jmespath>=1.0",
+    "xmltodict>=0.13",
 ]
 
 [project.optional-dependencies]
