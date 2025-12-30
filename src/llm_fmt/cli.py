@@ -34,7 +34,7 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     "--format",
     "-f",
     "output_format",
-    type=click.Choice(["toon", "json", "yaml", "auto"]),
+    type=click.Choice(["toon", "json", "yaml", "tsv", "auto"]),
     default=None,
     help="Output format (default: auto or from config).",
 )
@@ -124,7 +124,7 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
 ) -> None:
     """Convert JSON/YAML/XML to token-efficient formats for LLM contexts.
 
-    Supports TOON, compact JSON, and YAML output formats.
+    Supports TOON, compact JSON, YAML, and TSV output formats.
     Reduces token consumption by 30-60% when passing structured data to LLMs.
 
     Filters use JMESPath syntax (e.g., users[*].email, items[?active]).

@@ -4,14 +4,16 @@ from typing import Any, Protocol, runtime_checkable
 
 from llm_fmt.encoders.json_encoder import JsonEncoder
 from llm_fmt.encoders.toon import ToonEncoder
+from llm_fmt.encoders.tsv_encoder import TsvEncoder
 from llm_fmt.encoders.yaml_encoder import YamlEncoder
 
-__all__ = ["Encoder", "JsonEncoder", "ToonEncoder", "YamlEncoder", "get_encoder"]
+__all__ = ["Encoder", "JsonEncoder", "ToonEncoder", "TsvEncoder", "YamlEncoder", "get_encoder"]
 
 ENCODER_MAP: dict[str, type[Encoder]] = {
     "toon": ToonEncoder,
     "json": JsonEncoder,
     "yaml": YamlEncoder,
+    "tsv": TsvEncoder,
 }
 
 

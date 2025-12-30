@@ -3,7 +3,7 @@
 **Phase**: 3 - Auto-Selection & Polish  
 **Priority**: +50
 **Storypoints**: 3  
-**Status**: [ ] Not started
+**Status**: [x] Complete
 
 ## Objective
 
@@ -11,11 +11,11 @@ Implement TSV (tab-separated values) output for flat tabular data.
 
 ## Requirements
 
-- [ ] Convert uniform arrays to TSV
-- [ ] Header row with field names
-- [ ] Tab-separated values (better token efficiency than CSV)
-- [ ] Escape tabs and newlines in values
-- [ ] Error for non-tabular data
+- [x] Convert uniform arrays to TSV
+- [x] Header row with field names
+- [x] Tab-separated values (better token efficiency than CSV)
+- [x] Escape tabs and newlines in values
+- [x] Error for non-tabular data
 
 ## Why TSV over CSV
 
@@ -49,7 +49,7 @@ def _escape_tsv(value: str) -> str:
 
 ## Acceptance Criteria
 
-- [ ] Uniform arrays convert to TSV
-- [ ] Headers included
-- [ ] Special characters escaped
-- [ ] Clear error for non-tabular data
+- [x] Uniform arrays convert to TSV
+- [x] Headers included
+- [x] Special characters escaped
+- [x] Clear error for non-tabular data
