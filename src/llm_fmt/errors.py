@@ -88,3 +88,7 @@ class EncodeError(Exception):
         if self.format_name:
             return f"{self.format_name}: {super().__str__()}"
         return super().__str__()
+
+
+class ConfigError(Exception):
+    """Raised when configuration file is invalid or missing."""

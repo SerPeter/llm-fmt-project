@@ -8,7 +8,8 @@ import click
 
 from llm_fmt import __version__
 from llm_fmt.analyze import analyze, format_report, report_to_dict, select_format
-from llm_fmt.errors import EncodeError, ParseError
+from llm_fmt.config import load_config
+from llm_fmt.errors import ConfigError, EncodeError, ParseError
 from llm_fmt.filters import IncludeFilter, MaxDepthFilter
 from llm_fmt.parsers import JsonParser, YamlParser
 from llm_fmt.pipeline import PipelineBuilder
@@ -23,12 +24,19 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
 @click.command()
 @click.version_option(version=__version__, prog_name="llm-fmt")
 @click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Path to config file (default: .llm-fmt.toml in current or home dir).",
+)
+@click.option(
     "--format",
     "-f",
     "output_format",
     type=click.Choice(["toon", "json", "yaml", "auto"]),
-    default="auto",
-    help="Output format (default: auto).",
+    default=None,
+    help="Output format (default: auto or from config).",
 )
 @click.option(
     "--input-format",
@@ -50,6 +58,7 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
     "-d",
     "max_depth",
     type=int,
+    default=None,
     help="Maximum depth to traverse (applied after filters).",
 )
 @click.option(
@@ -77,8 +86,8 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
 @click.option(
     "--tokenizer",
     type=click.Choice(list(TOKENIZERS.keys())),
-    default="cl100k_base",
-    help="Tokenizer for counting (default: cl100k_base).",
+    default=None,
+    help="Tokenizer for counting (default: cl100k_base or from config).",
 )
 @click.option(
     "--analyze",
@@ -99,7 +108,8 @@ PARSER_MAP: dict[str, type[JsonParser | YamlParser]] = {
 @click.pass_context
 def main(  # noqa: PLR0912, PLR0913, PLR0915
     ctx: click.Context,
-    output_format: str,
+    config_path: Path | None,
+    output_format: str | None,
     input_format: str,
     include_patterns: tuple[str, ...],
     max_depth: int | None,
@@ -107,7 +117,7 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
     sort_keys: bool,  # noqa: FBT001
     no_color: bool,  # noqa: FBT001
     count_tokens: bool,  # noqa: FBT001
-    tokenizer: str,
+    tokenizer: str | None,
     analyze: bool,  # noqa: FBT001
     output_json: bool,  # noqa: FBT001
     input_file: Path | None,
@@ -119,6 +129,20 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
 
     Filters use JMESPath syntax (e.g., users[*].email, items[?active]).
     """
+    # Load configuration
+    try:
+        config = load_config(config_path)
+    except ConfigError as e:
+        msg = str(e)
+        raise click.ClickException(msg) from e
+
+    # Apply config defaults for unset CLI options
+    effective_format = output_format if output_format is not None else config.format
+    effective_tokenizer = tokenizer if tokenizer is not None else config.tokenizer
+    # CLI --no-color overrides config; otherwise use config setting
+    effective_no_color = no_color or not config.output.color
+    effective_max_depth = max_depth if max_depth is not None else config.filter.default_max_depth
+
     # Read input
     if input_file is None:
         # Check if stdin is a TTY (interactive terminal with no piped input)
@@ -136,15 +160,17 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
 
     # Analysis mode
     if analyze:
-        _run_analysis(data, input_format, filename, tokenizer, output_json, no_color)
+        _run_analysis(
+            data, input_format, filename, effective_tokenizer, output_json, effective_no_color
+        )
         return
 
     # Determine parser
     parser = _detect_parser(filename, data) if input_format == "auto" else PARSER_MAP[input_format]()
 
     # Handle auto format selection
-    actual_format = output_format
-    if output_format == "auto":
+    actual_format = effective_format
+    if effective_format == "auto":
         try:
             parsed_data = parser.parse(data)
             actual_format = select_format(parsed_data)
@@ -168,9 +194,9 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
             msg = f"--filter[{i}]: {e}"
             raise click.ClickException(msg) from e
 
-    if max_depth is not None:
+    if effective_max_depth is not None:
         try:
-            builder.add_filter(MaxDepthFilter(max_depth))
+            builder.add_filter(MaxDepthFilter(effective_max_depth))
         except ValueError as e:
             msg = f"--max-depth: {e}"
             raise click.ClickException(msg) from e
@@ -189,9 +215,9 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
 
         # Token counting
         if count_tokens:
-            token_count = count_tokens_safe(result, tokenizer)
+            token_count = count_tokens_safe(result, effective_tokenizer)
             if token_count is not None:
-                click.echo(f"Tokens ({tokenizer}): {token_count}", err=True)
+                click.echo(f"Tokens ({effective_tokenizer}): {token_count}", err=True)
             else:
                 estimated = estimate_tokens(result)
                 click.echo(f"Tokens (estimated): ~{estimated}", err=True)
