@@ -17,6 +17,7 @@ csv.workspace = true
 indexmap.workspace = true
 thiserror.workspace = true
 rand.workspace = true
+regex.workspace = true
 
 [dev-dependencies]
 proptest = "1"

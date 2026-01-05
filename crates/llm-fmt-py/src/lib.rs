@@ -4,10 +4,14 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
+use pyo3::IntoPyObjectExt;
 
 use llm_fmt_core::{
+    analyze as core_analyze, detect as core_detect, format_report, report_to_json,
+    select_format as core_select_format,
     filters::{IncludeFilter, MaxDepthFilter, TruncationFilter, TruncationStrategy},
-    parsers::{CsvParser, JsonParser, XmlParser, YamlParser},
+    parsers::{CsvParser, JsonParser, Parser, XmlParser, YamlParser},
     PipelineBuilder,
 };
 
@@ -130,11 +134,145 @@ const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
+/// Analyze input data and compare token efficiency across formats.
+///
+/// Args:
+///     input: Input data as bytes.
+///     input_format: Input format ("json", "yaml", "xml", "csv", "tsv", "auto"). Default: "auto".
+///     output_json: If True, return JSON dict; if False, return formatted string. Default: False.
+///
+/// Returns:
+///     Analysis report as formatted string or JSON dict.
+///
+/// Raises:
+///     `ValueError`: If parsing fails.
+#[pyfunction]
+#[pyo3(signature = (input, /, input_format = "auto", output_json = false))]
+fn analyze(
+    py: Python<'_>,
+    input: &[u8],
+    input_format: &str,
+    output_json: bool,
+) -> PyResult<Py<PyAny>> {
+    // Parse input
+    let value = parse_input(input, input_format)?;
+
+    // Run analysis
+    let report = core_analyze(&value);
+
+    if output_json {
+        // Return as JSON dict
+        let json_value = report_to_json(&report);
+        let json_str = json_value.to_string();
+
+        // Parse JSON string to Python dict
+        let json_module = py.import("json")?;
+        let loads = json_module.getattr("loads")?;
+        let result = loads.call1((json_str,))?;
+        Ok(result.into_py_any(py)?)
+    } else {
+        // Return formatted string
+        let output = format_report(&report);
+        Ok(output.into_py_any(py)?)
+    }
+}
+
+/// Detect the shape of input data.
+///
+/// Args:
+///     input: Input data as bytes.
+///     input_format: Input format ("json", "yaml", "xml", "csv", "tsv", "auto"). Default: "auto".
+///
+/// Returns:
+///     Dict with data shape information.
+///
+/// Raises:
+///     `ValueError`: If parsing fails.
+#[pyfunction]
+#[pyo3(signature = (input, /, input_format = "auto"))]
+fn detect_shape(py: Python<'_>, input: &[u8], input_format: &str) -> PyResult<Py<PyAny>> {
+    // Parse input
+    let value = parse_input(input, input_format)?;
+
+    // Detect shape
+    let shape = core_detect(&value);
+
+    // Convert to Python dict
+    let dict = PyDict::new(py);
+    dict.set_item("is_array", shape.is_array)?;
+    dict.set_item("is_uniform_array", shape.is_uniform_array)?;
+    dict.set_item("array_length", shape.array_length)?;
+    dict.set_item("field_count", shape.field_count)?;
+    dict.set_item("max_depth", shape.max_depth)?;
+    dict.set_item("is_mostly_primitives", shape.is_mostly_primitives)?;
+    dict.set_item("description", shape.description)?;
+    dict.set_item("sample_keys", shape.sample_keys)?;
+    Ok(dict.into_py_any(py)?)
+}
+
+/// Select the optimal output format based on data shape.
+///
+/// Args:
+///     input: Input data as bytes.
+///     input_format: Input format ("json", "yaml", "xml", "csv", "tsv", "auto"). Default: "auto".
+///
+/// Returns:
+///     Recommended format name ("toon", "yaml", or "json").
+///
+/// Raises:
+///     `ValueError`: If parsing fails.
+#[pyfunction]
+#[pyo3(signature = (input, /, input_format = "auto"))]
+fn select_format(_py: Python<'_>, input: &[u8], input_format: &str) -> PyResult<String> {
+    // Parse input
+    let value = parse_input(input, input_format)?;
+
+    // Select format
+    Ok(core_select_format(&value).to_string())
+}
+
+/// Helper function to parse input based on format.
+fn parse_input(input: &[u8], input_format: &str) -> PyResult<llm_fmt_core::Value> {
+    let parser: Box<dyn Parser> = match input_format.to_lowercase().as_str() {
+        "json" => Box::new(JsonParser),
+        "yaml" | "yml" => Box::new(YamlParser),
+        "xml" => Box::new(XmlParser),
+        "csv" => Box::new(CsvParser::new()),
+        "tsv" => Box::new(CsvParser::tsv()),
+        "auto" => {
+            // Auto-detect based on content
+            let content = std::str::from_utf8(input).unwrap_or("");
+            let trimmed = content.trim();
+            if trimmed.starts_with('{') || trimmed.starts_with('[') {
+                Box::new(JsonParser)
+            } else if trimmed.starts_with('<') {
+                Box::new(XmlParser)
+            } else if trimmed.contains(':') && !trimmed.contains(',') {
+                Box::new(YamlParser)
+            } else {
+                Box::new(JsonParser)
+            }
+        }
+        _ => {
+            return Err(PyValueError::new_err(format!(
+                "Unsupported input format: {input_format}"
+            )));
+        }
+    };
+
+    parser
+        .parse(input)
+        .map_err(|e| PyValueError::new_err(e.to_string()))
+}
+
 /// Python module definition.
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(convert, m)?)?;
     m.add_function(wrap_pyfunction!(is_available, m)?)?;
     m.add_function(wrap_pyfunction!(version, m)?)?;
+    m.add_function(wrap_pyfunction!(analyze, m)?)?;
+    m.add_function(wrap_pyfunction!(detect_shape, m)?)?;
+    m.add_function(wrap_pyfunction!(select_format, m)?)?;
     Ok(())
 }

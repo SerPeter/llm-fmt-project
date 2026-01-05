@@ -9,11 +9,19 @@ from llm_fmt import __version__
 
 # Import the Rust native module
 try:
-    from llm_fmt._native import convert as rust_convert, is_available, version as rust_version
+    from llm_fmt._native import (
+        analyze as rust_analyze,
+        convert as rust_convert,
+        is_available,
+        select_format as rust_select_format,
+        version as rust_version,
+    )
     RUST_AVAILABLE = is_available()
 except ImportError:
     RUST_AVAILABLE = False
     rust_convert = None
+    rust_analyze = None
+    rust_select_format = None
     rust_version = lambda: "N/A"
 
 
@@ -86,6 +94,16 @@ except ImportError:
     help="JSON paths to preserve from truncation (can be specified multiple times).",
 )
 @click.option(
+    "--analyze",
+    is_flag=True,
+    help="Analyze data and show token comparison across formats.",
+)
+@click.option(
+    "--analyze-json",
+    is_flag=True,
+    help="Output analysis as JSON (implies --analyze).",
+)
+@click.option(
     "--debug",
     is_flag=True,
     help="Show full traceback on errors.",
@@ -106,6 +124,8 @@ def main(
     max_string_length: int | None,
     truncation_strategy: str,
     preserve: tuple[str, ...],
+    analyze: bool,
+    analyze_json: bool,
     debug: bool,
     input_file: Path | None,
 ) -> None:
@@ -121,12 +141,17 @@ def main(
         llm-fmt -f tsv data.json                 # Convert to TSV
         llm-fmt -i "users[*].name" data.json     # Extract user names
         llm-fmt --max-items 10 data.json         # Limit arrays to 10 items
-        llm-fmt --max-string-length 100 data.json # Truncate long strings
+        llm-fmt --analyze data.json              # Show token comparison
+        llm-fmt --analyze-json data.json         # Analysis as JSON
         cat data.json | llm-fmt                  # Read from stdin
     """
     if not RUST_AVAILABLE:
         click.echo("Error: Rust native module not available. Please reinstall llm-fmt.", err=True)
         sys.exit(1)
+
+    # Handle analyze_json implying analyze
+    if analyze_json:
+        analyze = True
 
     try:
         # Read input
@@ -140,6 +165,17 @@ def main(
                 click.echo(f"Error: File not found: {input_file}", err=True)
                 sys.exit(1)
             data = input_file.read_bytes()
+
+        # Handle analyze mode
+        if analyze:
+            import json
+            result = rust_analyze(data, input_format=input_format, output_json=analyze_json)
+            if analyze_json:
+                # Pretty print JSON output
+                click.echo(json.dumps(result, indent=2))
+            else:
+                click.echo(result)
+            return
 
         # Call Rust convert function
         result = rust_convert(

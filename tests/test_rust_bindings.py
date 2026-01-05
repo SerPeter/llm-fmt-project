@@ -308,6 +308,64 @@ class TestTruncationFilter:
         assert result == "[1,2,3]"
 
 
+class TestAnalysis:
+    """Test analysis functionality."""
+
+    def test_analyze_uniform_array(self):
+        """Test analysis of uniform array data."""
+        from llm_fmt import analyze
+
+        data = b'[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]'
+        result = analyze(data, output_json=True)
+
+        assert result["recommendation"] == "TOON"
+        assert result["data_shape"]["is_uniform_array"] is True
+        assert result["data_shape"]["array_length"] == 2
+        assert len(result["formats"]) >= 4
+
+    def test_analyze_flat_object(self):
+        """Test analysis of flat object data."""
+        from llm_fmt import analyze
+
+        data = b'{"host": "localhost", "port": 5432}'
+        result = analyze(data, output_json=True)
+
+        assert result["recommendation"] == "YAML"
+        assert result["data_shape"]["is_array"] is False
+
+    def test_analyze_string_output(self):
+        """Test analysis with string output format."""
+        from llm_fmt import analyze
+
+        data = b'[{"id": 1}, {"id": 2}]'
+        result = analyze(data, output_json=False)
+
+        assert isinstance(result, str)
+        assert "Token Analysis" in result
+        assert "TOON" in result
+
+    def test_detect_shape(self):
+        """Test data shape detection."""
+        from llm_fmt import detect_shape
+
+        data = b'[{"id": 1}, {"id": 2}]'
+        shape = detect_shape(data)
+
+        assert shape["is_array"] is True
+        assert shape["is_uniform_array"] is True
+        assert shape["array_length"] == 2
+
+    def test_select_format(self):
+        """Test automatic format selection."""
+        from llm_fmt import select_format
+
+        # Uniform array -> TOON
+        assert select_format(b'[{"id": 1}, {"id": 2}]') == "toon"
+
+        # Flat object -> YAML
+        assert select_format(b'{"host": "localhost"}') == "yaml"
+
+
 class TestErrorHandling:
     """Test error handling."""
 
