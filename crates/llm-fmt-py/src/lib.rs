@@ -6,7 +6,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use llm_fmt_core::{
-    filters::{IncludeFilter, MaxDepthFilter},
+    filters::{IncludeFilter, MaxDepthFilter, TruncationFilter, TruncationStrategy},
     parsers::{CsvParser, JsonParser, XmlParser, YamlParser},
     PipelineBuilder,
 };
@@ -20,6 +20,10 @@ use llm_fmt_core::{
 ///     `max_depth`: Maximum depth to traverse. Default: None (unlimited).
 ///     `sort_keys`: Sort object keys alphabetically. Default: False.
 ///     `include`: Path expression to extract (e.g., "users[*].name"). Default: None.
+///     `max_items`: Maximum items per array. Default: None (unlimited).
+///     `max_string_length`: Maximum length for string values. Default: None (unlimited).
+///     `truncation_strategy`: Strategy for array truncation ("head", "tail", "sample", "balanced"). Default: "head".
+///     `preserve`: Paths to preserve from truncation (e.g., ["$.id", "$.metadata"]). Default: None.
 ///
 /// Returns:
 ///     Formatted output as string.
@@ -27,7 +31,7 @@ use llm_fmt_core::{
 /// Raises:
 ///     `ValueError`: If parsing or encoding fails.
 #[pyfunction]
-#[pyo3(signature = (input, /, format = "toon", input_format = "auto", max_depth = None, sort_keys = false, include = None))]
+#[pyo3(signature = (input, /, format = "toon", input_format = "auto", max_depth = None, sort_keys = false, include = None, max_items = None, max_string_length = None, truncation_strategy = "head", preserve = None))]
 fn convert(
     py: Python<'_>,
     input: &[u8],
@@ -36,6 +40,10 @@ fn convert(
     max_depth: Option<usize>,
     sort_keys: bool,
     include: Option<&str>,
+    max_items: Option<usize>,
+    max_string_length: Option<usize>,
+    truncation_strategy: &str,
+    preserve: Option<Vec<String>>,
 ) -> PyResult<String> {
     py.detach(|| {
         let mut builder = PipelineBuilder::new();
@@ -70,6 +78,29 @@ fn convert(
         if let Some(expr) = include {
             let filter = IncludeFilter::new(expr)
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            builder = builder.add_filter(filter);
+        }
+
+        // Add truncation filter if any truncation options are set
+        if max_items.is_some() || max_string_length.is_some() {
+            let strategy = TruncationStrategy::from_str(truncation_strategy)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+            let mut filter = TruncationFilter::new().with_strategy(strategy);
+
+            if let Some(items) = max_items {
+                filter = filter.with_max_items(items);
+            }
+
+            if let Some(length) = max_string_length {
+                filter = filter.with_max_string_length(length);
+            }
+
+            if let Some(ref paths) = preserve {
+                let path_refs: Vec<&str> = paths.iter().map(String::as_str).collect();
+                filter = filter.with_preserve_paths(&path_refs);
+            }
+
             builder = builder.add_filter(filter);
         }
 

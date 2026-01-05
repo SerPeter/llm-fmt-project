@@ -63,6 +63,29 @@ except ImportError:
     help="Sort object keys alphabetically (JSON format only).",
 )
 @click.option(
+    "--max-items",
+    type=int,
+    default=None,
+    help="Maximum items per array.",
+)
+@click.option(
+    "--max-string-length",
+    type=int,
+    default=None,
+    help="Maximum length for string values.",
+)
+@click.option(
+    "--truncation-strategy",
+    type=click.Choice(["head", "tail", "sample", "balanced"]),
+    default="head",
+    help="Strategy for selecting items when truncating arrays (default: head).",
+)
+@click.option(
+    "--preserve",
+    multiple=True,
+    help="JSON paths to preserve from truncation (can be specified multiple times).",
+)
+@click.option(
     "--debug",
     is_flag=True,
     help="Show full traceback on errors.",
@@ -79,6 +102,10 @@ def main(
     max_depth: int | None,
     output_file: Path | None,
     sort_keys: bool,
+    max_items: int | None,
+    max_string_length: int | None,
+    truncation_strategy: str,
+    preserve: tuple[str, ...],
     debug: bool,
     input_file: Path | None,
 ) -> None:
@@ -89,11 +116,13 @@ def main(
 
     \b
     Examples:
-        llm-fmt data.json                    # Convert to TOON (default)
-        llm-fmt -f yaml data.json            # Convert to YAML
-        llm-fmt -f tsv data.json             # Convert to TSV
-        llm-fmt -i "users[*].name" data.json # Extract user names
-        cat data.json | llm-fmt              # Read from stdin
+        llm-fmt data.json                        # Convert to TOON (default)
+        llm-fmt -f yaml data.json                # Convert to YAML
+        llm-fmt -f tsv data.json                 # Convert to TSV
+        llm-fmt -i "users[*].name" data.json     # Extract user names
+        llm-fmt --max-items 10 data.json         # Limit arrays to 10 items
+        llm-fmt --max-string-length 100 data.json # Truncate long strings
+        cat data.json | llm-fmt                  # Read from stdin
     """
     if not RUST_AVAILABLE:
         click.echo("Error: Rust native module not available. Please reinstall llm-fmt.", err=True)
@@ -120,6 +149,10 @@ def main(
             max_depth=max_depth,
             sort_keys=sort_keys,
             include=include_pattern,
+            max_items=max_items,
+            max_string_length=max_string_length,
+            truncation_strategy=truncation_strategy,
+            preserve=list(preserve) if preserve else None,
         )
 
         # Output

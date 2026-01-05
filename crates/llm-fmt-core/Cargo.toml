@@ -16,6 +16,7 @@ quick-xml.workspace = true
 csv.workspace = true
 indexmap.workspace = true
 thiserror.workspace = true
+rand.workspace = true
 
 [dev-dependencies]
 proptest = "1"

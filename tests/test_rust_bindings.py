@@ -240,6 +240,74 @@ class TestAutoDetection:
         assert "value" in result
 
 
+class TestTruncationFilter:
+    """Test truncation filtering."""
+
+    def test_max_items_head(self):
+        """Test max_items with head strategy (default)."""
+        data = b'[1, 2, 3, 4, 5]'
+        result = convert(data, format="json", max_items=3)
+        assert result == "[1,2,3]"
+
+    def test_max_items_tail(self):
+        """Test max_items with tail strategy."""
+        data = b'[1, 2, 3, 4, 5]'
+        result = convert(data, format="json", max_items=3, truncation_strategy="tail")
+        assert result == "[3,4,5]"
+
+    def test_max_items_balanced(self):
+        """Test max_items with balanced strategy."""
+        data = b'[1, 2, 3, 4, 5, 6]'
+        result = convert(data, format="json", max_items=4, truncation_strategy="balanced")
+        assert result == "[1,2,5,6]"
+
+    def test_max_items_nested(self):
+        """Test max_items on nested arrays."""
+        data = b'{"users": [1, 2, 3, 4, 5], "logs": [6, 7, 8]}'
+        result = convert(data, format="json", max_items=2)
+        assert '"users":[1,2]' in result
+        assert '"logs":[6,7]' in result
+
+    def test_max_string_length(self):
+        """Test max_string_length truncation."""
+        data = b'{"description": "This is a very long string that should be truncated"}'
+        result = convert(data, format="json", max_string_length=20)
+        assert "...[truncated]" in result
+        # Description should be truncated
+        assert "very long string" not in result
+
+    def test_max_string_length_short_strings_unchanged(self):
+        """Test that short strings are not truncated."""
+        data = b'{"name": "Alice"}'
+        result = convert(data, format="json", max_string_length=100)
+        assert result == '{"name":"Alice"}'
+
+    def test_preserve_paths(self):
+        """Test preserve option protects paths from truncation."""
+        data = b'{"important": [1, 2, 3, 4, 5], "other": [6, 7, 8, 9, 10]}'
+        result = convert(
+            data,
+            format="json",
+            max_items=2,
+            preserve=["$.important"],
+        )
+        # important should be preserved (all 5 items)
+        assert '"important":[1,2,3,4,5]' in result
+        # other should be truncated to 2 items
+        assert '"other":[6,7]' in result
+
+    def test_invalid_truncation_strategy(self):
+        """Test that invalid truncation strategy raises error."""
+        with pytest.raises(ValueError, match="[Uu]nknown truncation strategy"):
+            convert(b"[1, 2, 3]", format="json", max_items=2, truncation_strategy="invalid")
+
+    def test_no_truncation_when_within_limits(self):
+        """Test that data within limits is unchanged."""
+        data = b'[1, 2, 3]'
+        result = convert(data, format="json", max_items=10)
+        assert result == "[1,2,3]"
+
+
 class TestErrorHandling:
     """Test error handling."""
 

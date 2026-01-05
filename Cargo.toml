@@ -23,6 +23,7 @@ csv = "1"
 # Utilities
 indexmap = { version = "2", features = ["serde"] }
 thiserror = "2"
+rand = "0.9"
 
 # Internal crates
 llm-fmt-core = { path = "crates/llm-fmt-core" }

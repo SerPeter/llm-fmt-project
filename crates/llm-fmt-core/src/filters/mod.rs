@@ -5,9 +5,11 @@
 
 mod depth;
 mod include;
+mod truncate;
 
 pub use depth::MaxDepthFilter;
 pub use include::IncludeFilter;
+pub use truncate::{TruncationFilter, TruncationStrategy, TruncationSummary};
 
 use std::fmt;
 
