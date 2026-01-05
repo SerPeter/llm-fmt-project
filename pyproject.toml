@@ -14,19 +14,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Rust",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: General",
 ]
 dependencies = [
     "click>=8.1",
-    "orjson>=3.10",
-    "pyyaml>=6.0",
-    "jmespath>=1.0",
-    "xmltodict>=0.13",
 ]
-
-[project.optional-dependencies]
-analysis = ["tiktoken>=0.7"]
 
 [project.scripts]
 llm-fmt = "llm_fmt.cli:main"
@@ -37,11 +31,14 @@ Repository = "https://github.com/youruser/llm-fmt"
 Issues = "https://github.com/youruser/llm-fmt/issues"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/llm_fmt"]
+[tool.maturin]
+manifest-path = "crates/llm-fmt-py/Cargo.toml"
+features = ["pyo3/extension-module"]
+python-source = "src"
+module-name = "llm_fmt._native"
 
 [dependency-groups]
 dev = [
@@ -74,7 +71,7 @@ reportUnknownMemberType = "warning"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=llm_fmt"
+addopts = "-v"
 
 [tool.coverage.run]
 source = ["src/llm_fmt"]
@@ -86,4 +83,3 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
 ]
-fail_under = 90
