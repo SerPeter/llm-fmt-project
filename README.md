@@ -2,7 +2,7 @@
 
 **Token-efficient data format converter for LLM and agent contexts**
 
-Convert JSON, YAML, and XML to optimized formats that reduce token consumption by 30-60% when passing structured data to LLMs. Includes filtering, analysis, and automatic format selection based on data shape.
+Convert JSON, YAML, XML, and CSV to optimized formats that reduce token consumption by 30-70% when passing structured data to LLMs. Includes filtering, truncation, analysis, and automatic format selection based on data shape.
 
 ## Why?
 
@@ -10,7 +10,7 @@ Every brace, quote, and repeated key in JSON translates to tokens billed. When b
 
 ```bash
 # A 10KB JSON API response might use 3,000 tokens
-# The same data in TOON format: ~1,200 tokens
+# The same data in TSV format: ~1,000 tokens
 # With filtering applied: potentially under 500 tokens
 ```
 
@@ -18,13 +18,15 @@ This tool sits at the boundary between your data sources and LLM consumption, op
 
 ## Features
 
-- **Multi-format output**: TOON, compact JSON, YAML, TSV (for flat data)
+- **Multi-format input**: JSON, YAML, XML, CSV (auto-detected)
+- **Multi-format output**: TOON, compact JSON, YAML, TSV, CSV
 - **Smart auto-selection**: Analyzes data shape and picks optimal format
-- **Filtering**: dpath-style glob patterns, max-depth limits, field exclusion
+- **Filtering**: Path expressions, max-depth limits, field exclusion
+- **Truncation**: Head/tail/sample/balanced strategies with preserve paths
 - **Token analysis**: Compare token counts across formats before choosing
-- **Truncation**: Smart truncation strategies for large outputs
+- **Configuration**: Hierarchical config (CLI > env vars > config files > defaults)
 - **Pipe-friendly**: Works seamlessly in shell pipelines
-- **Fast**: Uses orjson for JSON parsing, with optional Rust acceleration
+- **Fast**: Rust core with Python bindings via PyO3
 
 ## Installation
 
@@ -42,33 +44,41 @@ pip install llm-fmt
 ## Quick Start
 
 ```bash
-# Convert JSON to TOON (best for uniform arrays)
-llm-fmt data.json --format toon
+# Convert JSON to TOON (default format)
+llm-fmt data.json
 
-# Auto-select optimal format based on data structure
-llm-fmt data.json --auto
+# Specify output format
+llm-fmt data.json -f yaml
+llm-fmt data.json -f tsv
 
-# Filter before conversion (compound savings)
-llm-fmt data.json --filter "users/*/email,name" --format toon
+# Filter specific paths
+llm-fmt data.json -i "users[*].name"
+
+# Limit array sizes and string lengths
+llm-fmt data.json --max-items 10 --max-string-length 100
 
 # Analyze token usage across all formats
 llm-fmt data.json --analyze
 
 # Pipe from API response
-curl -s api.example.com/users | llm-fmt --format toon
+curl -s api.example.com/users | llm-fmt -f toon
 
 # Limit nesting depth
-llm-fmt complex.json --max-depth 2 --format yaml
+llm-fmt complex.json --max-depth 2 -f yaml
+
+# Show resolved configuration
+llm-fmt --show-config
 ```
 
 ## Output Formats
 
 | Format | Best For | Typical Savings |
 |--------|----------|-----------------|
-| `toon` | Uniform arrays of objects (logs, records, API lists) | 30-60% |
-| `compact-json` | Deeply nested configs, mixed structures | 10-20% |
-| `yaml` | Key-value pairs, readable configs | 20-40% |
-| `tsv` | Flat arrays, tabular data | 40-50% |
+| `tsv` | Flat tabular data, uniform arrays | 60-75% |
+| `toon` | Uniform arrays of objects (logs, records, API lists) | 45-60% |
+| `csv` | Tabular data with special characters | 50-60% |
+| `yaml` | Nested configs, key-value pairs | 25-35% |
+| `json` | Compatibility, deeply nested/mixed structures | 10-15% |
 
 ### Format Examples
 
@@ -94,27 +104,30 @@ users[2]{id,name,role}:
 {"users":[{"id":1,"name":"Alice","role":"admin"},{"id":2,"name":"Bob","role":"user"}]}
 ```
 
-## Filtering
-
-Filter data before format conversion to compound token savings:
+## Filtering & Truncation
 
 ```bash
-# Select specific paths (dpath glob syntax)
-llm-fmt data.json --filter "users/*/name"
-llm-fmt data.json --filter "results/**/id"      # recursive
-
-# Exclude fields
-llm-fmt data.json --exclude "_metadata,internal,debug"
+# Filter specific paths (bracket notation)
+llm-fmt data.json -i "users[*].name"
+llm-fmt data.json -i "results[0].data"
 
 # Limit nesting depth
 llm-fmt data.json --max-depth 3
 
-# Combine filters
-llm-fmt api-response.json \
-  --filter "data/items/*" \
-  --exclude "created_at,updated_at,_links" \
-  --max-depth 2 \
-  --format toon
+# Truncate large arrays
+llm-fmt data.json --max-items 50
+
+# Truncation strategies
+llm-fmt data.json --max-items 10 --truncation-strategy head      # first N items
+llm-fmt data.json --max-items 10 --truncation-strategy tail      # last N items
+llm-fmt data.json --max-items 10 --truncation-strategy balanced  # start + end
+llm-fmt data.json --max-items 10 --truncation-strategy sample    # random sample
+
+# Preserve specific paths from truncation
+llm-fmt data.json --max-items 5 --preserve "errors" --preserve "metadata"
+
+# Truncate long strings
+llm-fmt data.json --max-string-length 200
 ```
 
 ## Token Analysis
@@ -124,97 +137,113 @@ Compare token counts across formats to make informed decisions:
 ```bash
 $ llm-fmt large-response.json --analyze
 
-Format Analysis (using cl100k_base tokenizer):
-──────────────────────────────────────────────
-Original JSON:     3,247 tokens (100%)
-Compact JSON:      2,891 tokens (89%)
-YAML:              2,156 tokens (66%)
-TOON:              1,342 tokens (41%)  ← recommended
+Format Analysis:
+────────────────────────────────────────────
+Original JSON:     3,247 tokens (100.0%)
+Compact JSON:      2,891 tokens (89.0%)
+YAML:              2,156 tokens (66.4%)
+TOON:              1,342 tokens (41.3%)
+TSV:               1,102 tokens (33.9%)  ← recommended
 
-Data shape: uniform array of 150 objects with 8 fields
-Recommendation: TOON (saves 1,905 tokens per call)
+Data shape: uniform_array
+Recommendation: tsv
 ```
 
-## Auto Mode
+## Configuration
 
-Let the tool analyze your data and pick the optimal format:
+llm-fmt uses a hierarchical configuration system:
 
-```bash
-$ llm-fmt data.json --auto
+1. **CLI arguments** (highest priority)
+2. **Environment variables** (`LLM_FMT_*` prefix)
+3. **Config files** (`.llm-fmt.yaml`, `.llm-fmt.toml`)
+4. **pyproject.toml** (`[tool.llm-fmt]` section)
+5. **Strong defaults** (lowest priority)
 
-# Decision logic:
-# - Uniform array of objects → TOON
-# - Flat key-value pairs → YAML
-# - Deeply nested/mixed → compact-json
-# - Simple flat array → TSV
+### Config File Example
+
+Create `.llm-fmt.yaml` in your project:
+
+```yaml
+defaults:
+  format: toon
+  input_format: auto
+
+limits:
+  max_tokens: 10000    # ~10% of 100K context window
+  max_items: 500
+  max_string_length: 500
+  max_depth: 8
+
+truncation:
+  strategy: head
+  show_summary: true
+
+filter:
+  default_exclude:
+    - _metadata
+    - _links
+    - debug
+
+output:
+  strict: false        # Set true to error instead of truncating
 ```
 
-## Truncation (Large Outputs)
-
-For outputs exceeding token budgets:
+### Environment Variables
 
 ```bash
-# Truncate to fit token budget
-llm-fmt huge-response.json --max-tokens 4000
+export LLM_FMT_FORMAT=toon
+export LLM_FMT_MAX_TOKENS=5000
+export LLM_FMT_MAX_ITEMS=100
+export LLM_FMT_STRICT=true
+export LLM_FMT_DEFAULT_EXCLUDE="_metadata,_links,debug"
+```
 
-# Truncation strategies
-llm-fmt data.json --max-tokens 2000 --truncate middle  # preserve start/end
-llm-fmt data.json --max-tokens 2000 --truncate end     # keep beginning
-llm-fmt data.json --max-tokens 2000 --truncate sample  # representative sample
+### Strict Mode
+
+Use `--strict` to error instead of silently truncating:
+
+```bash
+$ llm-fmt huge-response.json --strict --max-items 10
+Error: Output exceeds max_items limit (1000 > 10 items)
+Hint: Use --max-items to increase limit, or remove --strict to allow truncation
 ```
 
 ## Python API
 
 ```python
-from llm_fmt import convert, analyze, Filter
+from llm_fmt import convert, analyze, detect_shape, select_format
 
 # Basic conversion
-toon_output = convert(data, format="toon")
+result = convert(data, format="toon")
 
-# With filtering
-filtered = convert(
+# With options
+result = convert(
     data,
-    format="auto",
-    filter=Filter(
-        include=["users/*/email", "users/*/name"],
-        exclude=["_metadata"],
-        max_depth=3
-    )
+    format="yaml",
+    max_depth=3,
+    max_items=100,
+    max_string_length=200,
 )
 
-# Analysis
-report = analyze(data)
-print(f"Best format: {report.recommended}")
-print(f"Token savings: {report.savings_percent}%")
-```
+# Auto-select format based on data shape
+shape = detect_shape(data)
+best_format = select_format(data)
+result = convert(data, format=best_format)
 
-## Configuration
-
-Create `.llm-fmt.toml` in your project or home directory:
-
-```toml
-[defaults]
-format = "auto"
-tokenizer = "cl100k_base"  # or "o200k_base" for GPT-4o
-
-[filter]
-default_exclude = ["_metadata", "_links", "debug"]
-default_max_depth = 5
-
-[analysis]
-show_recommendations = true
+# Analysis (returns dict or formatted string)
+report = analyze(data, output_json=True)
+print(f"Recommended: {report['recommendation']}")
+print(f"Savings: {report['formats']['toon']['savings_percent']}%")
 ```
 
 ## Requirements
 
-- Python 3.10+
-- Dependencies:
-  - `click` - CLI framework
-  - `orjson` - Fast JSON parsing
-  - `pyyaml` - YAML output
-  - `dpath` - Path-based filtering
-  - `tiktoken` - Token counting (optional, for analysis)
-  - `toon-format` - TOON encoding
+- Python 3.10+ (3.14+ for development)
+- Rust toolchain (for building from source)
+
+Runtime dependencies:
+- `click` - CLI framework
+- `pyyaml` - YAML config file support
 
 ## Development
 
@@ -224,16 +253,47 @@ git clone https://github.com/youruser/llm-fmt
 cd llm-fmt
 uv sync
 
+# Build Rust extension
+maturin develop
+
 # Run tests
 uv run pytest
 
+# Run Rust tests
+cargo test -p llm-fmt-core
+
 # Run CLI locally
 uv run llm-fmt --help
+
+# Run benchmarks
+cargo bench
+cargo run --release --bin benchreport
 ```
+
+## Architecture
+
+llm-fmt has a Rust core (`llm-fmt-core`) with Python bindings via PyO3:
+
+```
+crates/
+├── llm-fmt-core/     # Rust library: parsers, encoders, filters, pipeline
+└── llm-fmt-py/       # PyO3 bindings exposing Rust to Python
+
+src/llm_fmt/
+├── __init__.py       # Python API (wraps Rust functions)
+├── cli.py            # Click CLI
+└── config.py         # Configuration system
+```
+
+The Rust core handles all data processing:
+- **Parsers**: JSON, YAML, XML, CSV (auto-detection)
+- **Encoders**: TOON, JSON, YAML, TSV, CSV
+- **Filters**: Include paths, max depth, truncation
+- **Analysis**: Data shape detection, token estimation, format recommendation
 
 ## Benchmarks
 
-Benchmarks run on synthetic data with realistic shapes. Token counts use heuristic estimation (~94% accuracy vs tiktoken).
+Token counts use heuristic estimation (~94% accuracy vs tiktoken).
 
 ### Token Savings by Format
 
@@ -300,7 +360,6 @@ cargo bench
 
 - [toon-format](https://github.com/toon-format/toon) - TOON specification and reference implementation
 - [LLMLingua](https://github.com/microsoft/LLMLingua) - ML-based prompt compression
-- [orjson](https://github.com/ijl/orjson) - Fast JSON library for Python
 
 ## License
 

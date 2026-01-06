@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-llm-fmt is a token-efficient data format converter for LLM and agent contexts. It converts JSON, YAML, and XML to optimized formats (TOON, compact JSON, YAML, TSV) that reduce token consumption by 30-60% when passing structured data to LLMs.
+llm-fmt is a token-efficient data format converter for LLM and agent contexts. It converts JSON, YAML, XML, and CSV to optimized formats (TOON, compact JSON, YAML, TSV, CSV) that reduce token consumption by 30-70% when passing structured data to LLMs.
 
-**Status**: Early development - source code not yet implemented. Task specifications in `.tasks/` directory define the implementation plan.
+**Status**: Core functionality complete. Rust implementation with PyO3 bindings.
 
 ## Commands
 
@@ -14,12 +14,17 @@ llm-fmt is a token-efficient data format converter for LLM and agent contexts. I
 # Install dependencies
 uv sync
 
+# Build Rust extension
+maturin develop
+
 # Run CLI
 uv run llm-fmt --help
 
-# Run tests
+# Run Python tests
 uv run pytest
-uv run pytest tests/test_cli.py::test_specific  # single test
+
+# Run Rust tests
+cargo test -p llm-fmt-core
 
 # Lint and format
 uv run ruff check src/ tests/
@@ -28,54 +33,67 @@ uv run ruff format src/ tests/
 # Type checking
 uv run basedpyright src/
 
-# Build
-uv build
+# Run benchmarks
+cargo bench
+cargo run --release --bin benchreport
 ```
 
 ## Architecture
 
-### Planned Source Structure
+### Source Structure
 ```
+crates/
+├── llm-fmt-core/           # Rust library
+│   ├── src/
+│   │   ├── lib.rs          # Public API, Value type
+│   │   ├── parsers/        # JSON, YAML, XML, CSV parsers
+│   │   ├── encoders/       # TOON, JSON, YAML, TSV, CSV encoders
+│   │   ├── filters/        # Include, depth, truncation filters
+│   │   ├── pipeline.rs     # Pipeline orchestration
+│   │   ├── analysis.rs     # Data shape detection
+│   │   └── tokens.rs       # Token estimation
+│   └── benches/            # Criterion benchmarks
+│
+└── llm-fmt-py/             # PyO3 bindings
+
 src/llm_fmt/
-├── cli.py              # Click CLI entry point
-├── convert.py          # Format conversion orchestration
-├── parsers.py          # JSON/YAML/XML input parsing
-├── filter.py           # dpath-based filtering (--filter, --exclude, --max-depth)
-├── detect.py           # Data shape detection for auto-format selection
-├── analyze.py          # Token analysis and format recommendations
-├── tokens.py           # tiktoken integration for token counting
-└── formats/
-    ├── toon.py         # TOON encoding (best for uniform arrays)
-    ├── compact_json.py # Minified JSON output
-    └── yaml_fmt.py     # YAML output
+├── __init__.py             # Python API exports
+├── cli.py                  # Click CLI
+└── config.py               # Configuration system
 ```
 
 ### Output Formats
-- **TOON**: Tabular format for uniform arrays (30-60% savings)
-- **Compact JSON**: Minified JSON (10-20% savings)
-- **YAML**: Human-readable (20-40% savings)
-- **TSV**: Tab-separated for flat data (40-50% savings)
+- **TSV**: Tab-separated (60-75% savings for tabular data)
+- **TOON**: Tabular Object Notation (45-60% savings for uniform arrays)
+- **CSV**: Comma-separated (50-60% savings)
+- **YAML**: Human-readable (25-35% savings)
+- **JSON**: Compact JSON (10-15% savings)
 
 ### Key Dependencies
-- `click`: CLI framework
-- `orjson`: Fast JSON parsing
-- `pyyaml`: YAML output
-- `dpath`: Path-based filtering
-- `tiktoken`: Token counting (optional)
+
+**Rust (core):**
+- `serde_json` - JSON parsing
+- `serde_yaml` - YAML parsing/encoding
+- `quick-xml` - XML parsing
+- `csv` - CSV parsing/encoding
+- `indexmap` - Ordered maps
+
+**Python (CLI/config):**
+- `click` - CLI framework
+- `pyyaml` - YAML config file support
 
 ## Development Phases
 
-Task files in `.tasks/` contain detailed specifications:
-- **Phase 1** (001-007): MVP - core format conversion
-- **Phase 2** (008-012): Filtering and token analysis
-- **Phase 3** (013-019): Auto-format selection, tests, PyPI release
-- **Phase 4** (020-023, 025): YAML/XML input, Rust acceleration
-- **Phase 5** (026-030): LangChain/LlamaIndex/MCP integrations
+Archived task files in `.tasks/archive/` contain original specifications:
+- **Phase 1-4**: Complete (core, filtering, analysis, Rust, config)
+- **Phase 5**: Not started (LangChain/LlamaIndex/MCP integrations)
+
+See [ROADMAP.md](ROADMAP.md) for current status.
 
 ## Code Style
 
 - **Python**: 3.14+ (configured in pyproject.toml)
-- **Formatter/Linter**: Ruff (see `ruff.toml`)
+- **Rust**: Standard rustfmt
+- **Formatter/Linter**: Ruff for Python
 - **Line length**: 120
 - **Quotes**: Double
-- **Docstrings**: Google convention
