@@ -8,6 +8,7 @@
 //! - Pipeline orchestration
 
 pub mod analyze;
+pub mod benchdata;
 pub mod detect;
 pub mod encoders;
 pub mod error;
@@ -22,4 +23,4 @@ pub use detect::{detect, detect_data_shape, select_format, DataShape};
 pub use error::{Error, Result};
 pub use pipeline::{Pipeline, PipelineBuilder};
 pub use tokens::{calculate_savings, estimate_tokens};
-pub use value::Value;
+pub use value::{Number, Value};

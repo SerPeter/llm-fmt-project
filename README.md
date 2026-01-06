@@ -233,17 +233,68 @@ uv run llm-fmt --help
 
 ## Benchmarks
 
-Tested on common API response patterns:
+Benchmarks run on synthetic data with realistic shapes. Token counts use heuristic estimation (~94% accuracy vs tiktoken).
 
-| Dataset | JSON Tokens | TOON Tokens | Savings |
-|---------|-------------|-------------|---------|
-| GitHub API (repos list) | 4,521 | 1,847 | 59% |
-| Stripe API (payments) | 3,892 | 2,103 | 46% |
-| OpenAPI spec | 12,445 | 11,203 | 10% |
-| Kubernetes pod list | 8,234 | 3,456 | 58% |
-| Nested config | 1,245 | 1,198 | 4% |
+### Token Savings by Format
 
-TOON excels for uniform arrays; diminishing returns for deeply nested or non-uniform structures.
+**Uniform Arrays (API Response style - 1K objects):**
+
+| Format | Tokens | Savings | Encoding Time |
+|--------|--------|---------|---------------|
+| Input JSON | 63,160 | - | - |
+| TSV | 24,162 | **61.7%** | 951µs |
+| CSV | 31,169 | 50.6% | 796µs |
+| TOON | 33,172 | 47.5% | 521µs |
+| YAML | 45,150 | 28.5% | 776µs |
+| Compact JSON | 57,151 | 9.5% | 305µs |
+
+**Tabular Data (1K rows):**
+
+| Format | Tokens | Savings | Encoding Time |
+|--------|--------|---------|---------------|
+| Input JSON | 39,620 | - | - |
+| TSV | 10,590 | **73.3%** | 804µs |
+| TOON | 15,598 | 60.6% | 506µs |
+| CSV | 15,595 | 60.6% | 848µs |
+| YAML | 27,580 | 30.4% | 701µs |
+| Compact JSON | 35,581 | 10.2% | 310µs |
+
+**Nested Config (depth 20):**
+
+| Format | Tokens | Savings |
+|--------|--------|---------|
+| Input JSON | 61,700 | - |
+| YAML | 41,596 | **32.6%** |
+| Compact JSON | 53,322 | 13.6% |
+
+### Format Selection Guide
+
+| Data Shape | Recommended | Typical Savings |
+|------------|-------------|-----------------|
+| Uniform arrays (logs, API lists) | TSV or TOON | 50-70% |
+| Tabular/flat data | TSV | 70-75% |
+| Mixed/sparse arrays | TOON | 40-50% |
+| Deeply nested configs | YAML | 30-35% |
+| Complex mixed structures | Compact JSON | 10-15% |
+
+### Encoding Performance (Rust core, 10K objects)
+
+| Encoder | Time | Throughput |
+|---------|------|------------|
+| JSON | 5.7ms | 280 MiB/s |
+| TOON | 8.8ms | 181 MiB/s |
+| YAML | 9.7ms | 164 MiB/s |
+| TSV | 11.4ms | 140 MiB/s |
+| CSV | 8.5ms | 188 MiB/s |
+
+Run benchmarks locally:
+```bash
+# Quick summary with token savings
+cargo run --release --bin benchreport
+
+# Full Criterion benchmark suite
+cargo bench
+```
 
 ## Related Projects
 

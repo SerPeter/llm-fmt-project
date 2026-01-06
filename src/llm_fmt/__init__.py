@@ -2,6 +2,9 @@
 
 __version__ = "0.1.0"
 
+# Export configuration
+from llm_fmt.config import Config, load_config
+
 # Re-export from Rust native module
 try:
     from llm_fmt._native import (
@@ -39,11 +42,13 @@ except ImportError:
 
 
 __all__ = [
+    "Config",
+    "RUST_AVAILABLE",
     "__version__",
     "analyze",
     "convert",
     "detect_shape",
-    "RUST_AVAILABLE",
+    "load_config",
     "native_version",
     "select_format",
 ]
