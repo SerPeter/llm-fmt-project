@@ -356,6 +356,30 @@ cargo run --release --bin benchreport
 cargo bench
 ```
 
+## Claude Code Integration
+
+llm-fmt includes a skill file for [Claude Code](https://claude.ai/code) integration.
+
+**Install the skill:**
+```bash
+# macOS/Linux
+cp llm-fmt.skill.md ~/.claude/skills/
+
+# Windows
+copy llm-fmt.skill.md %USERPROFILE%\.claude\skills\
+```
+
+**Add to `~/.claude/settings.json` to allow without prompts:**
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(uvx llm-fmt:*)"
+    ]
+  }
+}
+```
+
 ## Related Projects
 
 - [toon-format](https://github.com/toon-format/toon) - TOON specification and reference implementation

@@ -118,8 +118,8 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2024 | Rust core via PyO3 | Performance, memory safety, single codebase |
-| 2024 | Click for CLI | Industry standard, good UX |
-| 2024 | Hierarchical config | Flexible defaults, env vars, config files |
-| 2024 | Heuristic token counting | ~94% accuracy, no external dependencies |
-| 2024 | maturin for build | Best PyO3 integration |
+| 2026 | Rust core via PyO3 | Performance, memory safety, single codebase |
+| 2026 | Click for CLI | Industry standard, good UX |
+| 2026 | Hierarchical config | Flexible defaults, env vars, config files |
+| 2026 | Heuristic token counting | ~94% accuracy, no external dependencies |
+| 2026 | maturin for build | Best PyO3 integration |
