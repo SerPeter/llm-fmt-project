@@ -31,14 +31,11 @@ This tool sits at the boundary between your data sources and LLM consumption, op
 ## Installation
 
 ```bash
-# With uv (recommended)
-uv tool install llm-fmt
-
-# Or run directly without installing
-uvx llm-fmt input.json --format toon
-
 # With pip
-pip install llm-fmt
+pip install llm-file-format
+
+# With uv
+uv pip install llm-file-format
 ```
 
 ## Quick Start

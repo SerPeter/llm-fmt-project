@@ -1,5 +1,5 @@
 [project]
-name = "llm-fmt"
+name = "llm-file-format"
 version = "0.1.0"
 description = "Token-efficient data format converter for LLM contexts"
 readme = "README.md"
