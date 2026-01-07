@@ -58,7 +58,7 @@ fn parse_xml_string(xml: &str) -> std::result::Result<Value, quick_xml::DeError>
                 }
             }
             Ok(Event::Text(e)) => {
-                let text = e.unescape().unwrap_or_default().trim().to_string();
+                let text = e.decode().unwrap_or_default().trim().to_string();
                 if !text.is_empty() {
                     if let Some((_, value)) = stack.last_mut() {
                         *value = parse_text_value(&text);
