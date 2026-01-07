@@ -64,10 +64,9 @@ impl Encoder for TsvEncoder {
         }
 
         // Get headers from first object
-        let first = arr
-            .first()
-            .and_then(Value::as_object)
-            .ok_or_else(|| EncodeError::Tsv("TSV format requires all items to be objects".into()))?;
+        let first = arr.first().and_then(Value::as_object).ok_or_else(|| {
+            EncodeError::Tsv("TSV format requires all items to be objects".into())
+        })?;
 
         let headers: Vec<&String> = first.keys().collect();
 
@@ -78,13 +77,19 @@ impl Encoder for TsvEncoder {
         let mut lines = Vec::with_capacity(arr.len() + 1);
 
         // Header row
-        lines.push(headers.iter().map(|h| h.as_str()).collect::<Vec<_>>().join("\t"));
+        lines.push(
+            headers
+                .iter()
+                .map(|h| h.as_str())
+                .collect::<Vec<_>>()
+                .join("\t"),
+        );
 
         // Data rows
         for item in arr {
-            let obj = item
-                .as_object()
-                .ok_or_else(|| EncodeError::Tsv("TSV format requires all items to be objects".into()))?;
+            let obj = item.as_object().ok_or_else(|| {
+                EncodeError::Tsv("TSV format requires all items to be objects".into())
+            })?;
 
             let values: Vec<String> = headers
                 .iter()

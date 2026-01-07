@@ -11,10 +11,11 @@ Implements hierarchical configuration with precedence:
 from __future__ import annotations
 
 import os
-import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+import tomllib
 
 # Try importing yaml, but make it optional
 try:
@@ -82,7 +83,7 @@ class Config:
     def load(
         cls,
         config_path: Path | None = None,
-        no_config: bool = False,  # noqa: FBT001, FBT002
+        no_config: bool = False,
         start_dir: Path | None = None,
     ) -> Config:
         """Load config with full hierarchy resolution.
@@ -290,9 +291,7 @@ class Config:
         return value
 
     @classmethod
-    def _set_nested(
-        cls, config: Config, path: str, value: str | int | bool | list[str]  # noqa: FBT001
-    ) -> None:
+    def _set_nested(cls, config: Config, path: str, value: str | int | bool | list[str]) -> None:
         """Set a nested attribute by dot-separated path."""
         parts = path.split(".")
         obj: object = config

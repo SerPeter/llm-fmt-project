@@ -52,8 +52,7 @@ impl AnalysisReport {
     #[must_use]
     pub fn tokens_saved(&self) -> usize {
         self.best_format()
-            .map(|f| self.original_tokens.saturating_sub(f.tokens))
-            .unwrap_or(0)
+            .map_or(0, |f| self.original_tokens.saturating_sub(f.tokens))
     }
 }
 
@@ -185,8 +184,7 @@ fn value_to_serde_json(value: &Value) -> serde_json::Value {
                 serde_json::Value::Number(u.into())
             } else {
                 serde_json::Number::from_f64(n.as_f64())
-                    .map(serde_json::Value::Number)
-                    .unwrap_or(serde_json::Value::Null)
+                    .map_or(serde_json::Value::Null, serde_json::Value::Number)
             }
         }
         Value::String(s) => serde_json::Value::String(s.clone()),
@@ -206,26 +204,26 @@ fn value_to_serde_json(value: &Value) -> serde_json::Value {
 /// Determine best format based on data shape.
 fn recommend_format(shape: &DataShape, formats: &[FormatAnalysis]) -> (String, String) {
     // TOON is best for uniform arrays
-    if shape.is_uniform_array && shape.array_length > 1 {
-        if formats.iter().any(|f| f.name == "TOON") {
-            return (
-                "TOON".to_string(),
-                format!(
-                    "Uniform array of {} objects with {} fields",
-                    shape.array_length, shape.field_count
-                ),
-            );
-        }
+    if shape.is_uniform_array && shape.array_length > 1 && formats.iter().any(|f| f.name == "TOON")
+    {
+        return (
+            "TOON".to_string(),
+            format!(
+                "Uniform array of {} objects with {} fields",
+                shape.array_length, shape.field_count
+            ),
+        );
     }
 
     // YAML is good for shallow, mostly primitive structures
-    if shape.max_depth <= 2 && shape.is_mostly_primitives {
-        if formats.iter().any(|f| f.name == "YAML") {
-            return (
-                "YAML".to_string(),
-                "Shallow structure with mostly primitive values".to_string(),
-            );
-        }
+    if shape.max_depth <= 2
+        && shape.is_mostly_primitives
+        && formats.iter().any(|f| f.name == "YAML")
+    {
+        return (
+            "YAML".to_string(),
+            "Shallow structure with mostly primitive values".to_string(),
+        );
     }
 
     // Default: pick lowest token count that's not the baseline
@@ -241,7 +239,10 @@ fn recommend_format(shape: &DataShape, formats: &[FormatAnalysis]) -> (String, S
         );
     }
 
-    ("Compact JSON".to_string(), "Default efficient format".to_string())
+    (
+        "Compact JSON".to_string(),
+        "Default efficient format".to_string(),
+    )
 }
 
 /// Format analysis report for terminal output.
@@ -250,12 +251,19 @@ pub fn format_report(report: &AnalysisReport) -> String {
     let mut lines = Vec::new();
 
     // Header
-    let estimation_note = if report.is_estimated { " (estimated)" } else { "" };
+    let estimation_note = if report.is_estimated {
+        " (estimated)"
+    } else {
+        ""
+    };
     lines.push(format!("Token Analysis{estimation_note}"));
     lines.push(String::new());
 
     // Table header
-    lines.push(format!("{:<18} {:>10} {:>10}   ", "Format", "Tokens", "Savings"));
+    lines.push(format!(
+        "{:<18} {:>10} {:>10}   ",
+        "Format", "Tokens", "Savings"
+    ));
     lines.push("-".repeat(50));
 
     // Format rows
@@ -302,7 +310,6 @@ pub fn format_report(report: &AnalysisReport) -> String {
             // Usage hint
             let fmt_arg = match best.name.as_str() {
                 "TOON" => "toon",
-                "Compact JSON" => "json",
                 "YAML" => "yaml",
                 "TSV" => "tsv",
                 "CSV" => "csv",
@@ -393,7 +400,10 @@ mod tests {
 
         assert_eq!(report.recommendation, "TOON");
         assert!(report.data_shape.is_uniform_array);
-        assert!(report.formats.iter().any(|f| f.name == "TOON" && f.recommended));
+        assert!(report
+            .formats
+            .iter()
+            .any(|f| f.name == "TOON" && f.recommended));
     }
 
     #[test]

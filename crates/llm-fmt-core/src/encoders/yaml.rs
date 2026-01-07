@@ -100,8 +100,24 @@ impl YamlEncoder {
         let first = s.chars().next().unwrap();
         if matches!(
             first,
-            '-' | '?' | ':' | ',' | '[' | ']' | '{' | '}' | '#' | '&' | '*' | '!' | '|' | '>' | '\''
-                | '"' | '%' | '@' | '`'
+            '-' | '?'
+                | ':'
+                | ','
+                | '['
+                | ']'
+                | '{'
+                | '}'
+                | '#'
+                | '&'
+                | '*'
+                | '!'
+                | '|'
+                | '>'
+                | '\''
+                | '"'
+                | '%'
+                | '@'
+                | '`'
         ) {
             return true;
         }
@@ -232,10 +248,7 @@ mod tests {
         let encoder = YamlEncoder::new();
 
         assert_eq!(encoder.encode(&Value::from("hello")).unwrap(), "hello\n");
-        assert_eq!(
-            encoder.encode(&Value::from("true")).unwrap(),
-            "\"true\"\n"
-        );
+        assert_eq!(encoder.encode(&Value::from("true")).unwrap(), "\"true\"\n");
     }
 
     #[test]

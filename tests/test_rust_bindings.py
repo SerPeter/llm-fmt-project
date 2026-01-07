@@ -5,7 +5,7 @@ import pytest
 # Skip all tests if Rust module not available
 pytest.importorskip("llm_fmt._native")
 
-from llm_fmt import convert, RUST_AVAILABLE, native_version
+from llm_fmt import RUST_AVAILABLE, convert, native_version
 
 
 class TestModuleAvailability:
@@ -245,19 +245,19 @@ class TestTruncationFilter:
 
     def test_max_items_head(self):
         """Test max_items with head strategy (default)."""
-        data = b'[1, 2, 3, 4, 5]'
+        data = b"[1, 2, 3, 4, 5]"
         result = convert(data, format="json", max_items=3)
         assert result == "[1,2,3]"
 
     def test_max_items_tail(self):
         """Test max_items with tail strategy."""
-        data = b'[1, 2, 3, 4, 5]'
+        data = b"[1, 2, 3, 4, 5]"
         result = convert(data, format="json", max_items=3, truncation_strategy="tail")
         assert result == "[3,4,5]"
 
     def test_max_items_balanced(self):
         """Test max_items with balanced strategy."""
-        data = b'[1, 2, 3, 4, 5, 6]'
+        data = b"[1, 2, 3, 4, 5, 6]"
         result = convert(data, format="json", max_items=4, truncation_strategy="balanced")
         assert result == "[1,2,5,6]"
 
@@ -303,7 +303,7 @@ class TestTruncationFilter:
 
     def test_no_truncation_when_within_limits(self):
         """Test that data within limits is unchanged."""
-        data = b'[1, 2, 3]'
+        data = b"[1, 2, 3]"
         result = convert(data, format="json", max_items=10)
         assert result == "[1,2,3]"
 

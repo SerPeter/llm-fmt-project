@@ -60,10 +60,14 @@ fn bench_json_encoding(c: &mut Criterion) {
     for depth in [5, 10, 20] {
         let data = generate_nested_config(depth);
 
-        group.bench_with_input(BenchmarkId::new("nested_config", depth), &data, |b, data| {
-            let encoder = JsonEncoder::new(false);
-            b.iter(|| encoder.encode(data));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("nested_config", depth),
+            &data,
+            |b, data| {
+                let encoder = JsonEncoder::new(false);
+                b.iter(|| encoder.encode(data));
+            },
+        );
     }
 
     group.finish();

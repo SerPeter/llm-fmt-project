@@ -2,17 +2,21 @@
 //!
 //! This module exposes the Rust llm-fmt-core library to Python via `PyO3`.
 
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::doc_link_with_quotes)]
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::IntoPyObjectExt;
 
 use llm_fmt_core::{
-    analyze as core_analyze, detect as core_detect, format_report, report_to_json,
-    select_format as core_select_format,
+    analyze as core_analyze, detect as core_detect,
     filters::{IncludeFilter, MaxDepthFilter, TruncationFilter, TruncationStrategy},
+    format_report,
     parsers::{CsvParser, JsonParser, Parser, XmlParser, YamlParser},
-    PipelineBuilder,
+    report_to_json, select_format as core_select_format, PipelineBuilder,
 };
 
 /// Convert input data to a token-efficient format.
@@ -74,14 +78,14 @@ fn convert(
 
         // Add filters
         if let Some(depth) = max_depth {
-            let filter = MaxDepthFilter::new(depth)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            let filter =
+                MaxDepthFilter::new(depth).map_err(|e| PyValueError::new_err(e.to_string()))?;
             builder = builder.add_filter(filter);
         }
 
         if let Some(expr) = include {
-            let filter = IncludeFilter::new(expr)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            let filter =
+                IncludeFilter::new(expr).map_err(|e| PyValueError::new_err(e.to_string()))?;
             builder = builder.add_filter(filter);
         }
 
@@ -207,7 +211,7 @@ fn detect_shape(py: Python<'_>, input: &[u8], input_format: &str) -> PyResult<Py
     dict.set_item("is_mostly_primitives", shape.is_mostly_primitives)?;
     dict.set_item("description", shape.description)?;
     dict.set_item("sample_keys", shape.sample_keys)?;
-    Ok(dict.into_py_any(py)?)
+    dict.into_py_any(py)
 }
 
 /// Select the optimal output format based on data shape.

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Pre-commit hook to run clippy with the same flags as CI
+
+echo "Running clippy..."
+cargo clippy --all-targets --all-features -- -D warnings
+if [ $? -ne 0 ]; then
+    echo "Clippy found issues. Please fix them before committing."
+    exit 1
+fi
+
+echo "Clippy passed!"

@@ -176,20 +176,28 @@ fn bench_parser_comparison(c: &mut Criterion) {
     {
         let json = value_to_json(&data);
         let bytes = json.as_bytes().to_vec();
-        group.bench_with_input(BenchmarkId::new("json", "1k_objects"), &bytes, |b, bytes| {
-            let parser = JsonParser;
-            b.iter(|| parser.parse(bytes));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("json", "1k_objects"),
+            &bytes,
+            |b, bytes| {
+                let parser = JsonParser;
+                b.iter(|| parser.parse(bytes));
+            },
+        );
     }
 
     // YAML
     {
         let yaml = value_to_yaml(&data);
         let bytes = yaml.as_bytes().to_vec();
-        group.bench_with_input(BenchmarkId::new("yaml", "1k_objects"), &bytes, |b, bytes| {
-            let parser = YamlParser;
-            b.iter(|| parser.parse(bytes));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("yaml", "1k_objects"),
+            &bytes,
+            |b, bytes| {
+                let parser = YamlParser;
+                b.iter(|| parser.parse(bytes));
+            },
+        );
     }
 
     // XML

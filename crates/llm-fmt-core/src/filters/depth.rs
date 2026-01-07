@@ -127,11 +127,7 @@ mod tests {
         let mut obj = IndexMap::new();
         obj.insert(
             "items".to_string(),
-            Value::Array(vec![
-                Value::from(1),
-                Value::from(2),
-                Value::from(3),
-            ]),
+            Value::Array(vec![Value::from(1), Value::from(2), Value::from(3)]),
         );
         let data = Value::Object(obj);
 

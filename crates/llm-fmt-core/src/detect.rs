@@ -99,10 +99,11 @@ fn analyze_array(arr: &[Value], max_sample: usize) -> DataShape {
 
     if all_objects {
         // Check if uniform (all objects have same keys)
-        if let Some(first_keys) = get_object_keys(&sample[0]) {
-            let is_uniform = sample.iter().skip(1).all(|v| {
-                get_object_keys(v).map_or(false, |keys| keys == first_keys)
-            });
+        if let Some(first_keys) = get_object_keys(sample[0]) {
+            let is_uniform = sample
+                .iter()
+                .skip(1)
+                .all(|v| get_object_keys(v).is_some_and(|keys| keys == first_keys));
 
             if is_uniform {
                 shape.is_uniform_array = true;
@@ -154,7 +155,10 @@ fn analyze_object(obj: &indexmap::IndexMap<String, Value>) -> DataShape {
         return shape;
     }
 
-    let nested_count = obj.values().filter(|v| matches!(v, Value::Object(_) | Value::Array(_))).count();
+    let nested_count = obj
+        .values()
+        .filter(|v| matches!(v, Value::Object(_) | Value::Array(_)))
+        .count();
 
     if nested_count == 0 {
         shape.description = format!("Flat object with {} fields", obj.len());
@@ -250,7 +254,11 @@ fn check_mostly_primitives(value: &Value) -> bool {
     total == 0 || (primitive_count as f64 / total as f64) >= 0.7
 }
 
-fn count_primitives_in_value(value: &Value, primitive_count: &mut usize, complex_count: &mut usize) {
+fn count_primitives_in_value(
+    value: &Value,
+    primitive_count: &mut usize,
+    complex_count: &mut usize,
+) {
     match value {
         Value::Object(obj) => {
             for v in obj.values() {
@@ -435,6 +443,9 @@ mod tests {
         let shape = detect(&data);
 
         assert!(!shape.sample_keys.is_empty());
-        assert!(shape.sample_keys.contains(&"id".to_string()) || shape.sample_keys.contains(&"name".to_string()));
+        assert!(
+            shape.sample_keys.contains(&"id".to_string())
+                || shape.sample_keys.contains(&"name".to_string())
+        );
     }
 }

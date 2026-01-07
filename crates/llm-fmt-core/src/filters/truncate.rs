@@ -279,9 +279,12 @@ impl TruncationFilter {
             TruncationStrategy::Balanced => {
                 let half = max_items / 2;
                 let remainder = max_items % 2;
-                let head: Vec<Value> = arr.iter().take(half + remainder).cloned().collect();
                 let tail: Vec<Value> = arr.iter().skip(arr.len() - half).cloned().collect();
-                head.into_iter().chain(tail).collect()
+                arr.iter()
+                    .take(half + remainder)
+                    .cloned()
+                    .chain(tail)
+                    .collect()
             }
         };
 
@@ -291,9 +294,7 @@ impl TruncationFilter {
     /// Truncate a string if it exceeds the max length.
     /// Returns Some((truncated_string, chars_removed)) if truncation was needed.
     fn truncate_string(&self, s: &str) -> Option<(String, usize)> {
-        let Some(max_length) = self.max_string_length else {
-            return None;
-        };
+        let max_length = self.max_string_length?;
 
         if s.len() <= max_length {
             return None;
@@ -450,11 +451,7 @@ mod tests {
         );
         obj.insert(
             "logs".to_string(),
-            Value::Array(vec![
-                Value::from("a"),
-                Value::from("b"),
-                Value::from("c"),
-            ]),
+            Value::Array(vec![Value::from("a"), Value::from("b"), Value::from("c")]),
         );
         let data = Value::Object(obj);
 
@@ -480,19 +477,11 @@ mod tests {
         let mut obj = IndexMap::new();
         obj.insert(
             "important".to_string(),
-            Value::Array(vec![
-                Value::from(1),
-                Value::from(2),
-                Value::from(3),
-            ]),
+            Value::Array(vec![Value::from(1), Value::from(2), Value::from(3)]),
         );
         obj.insert(
             "other".to_string(),
-            Value::Array(vec![
-                Value::from("a"),
-                Value::from("b"),
-                Value::from("c"),
-            ]),
+            Value::Array(vec![Value::from("a"), Value::from("b"), Value::from("c")]),
         );
         let data = Value::Object(obj);
 
@@ -516,7 +505,10 @@ mod tests {
             .with_preserve_path("$.metadata");
 
         let mut metadata = IndexMap::new();
-        metadata.insert("description".to_string(), Value::from("this is a long description"));
+        metadata.insert(
+            "description".to_string(),
+            Value::from("this is a long description"),
+        );
 
         let mut obj = IndexMap::new();
         obj.insert("metadata".to_string(), Value::Object(metadata));
@@ -581,11 +573,7 @@ mod tests {
     #[test]
     fn test_filter_trait() {
         let filter = TruncationFilter::new().with_max_items(2);
-        let arr = Value::Array(vec![
-            Value::from(1),
-            Value::from(2),
-            Value::from(3),
-        ]);
+        let arr = Value::Array(vec![Value::from(1), Value::from(2), Value::from(3)]);
         let result = filter.apply(arr).unwrap();
         assert_eq!(result.as_array().unwrap().len(), 2);
     }

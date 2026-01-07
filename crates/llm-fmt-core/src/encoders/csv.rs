@@ -44,7 +44,10 @@ impl CsvEncoder {
 
     /// Escape and quote a CSV field if necessary.
     fn escape_csv(&self, value: &str) -> String {
-        if value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r')
+        if value.contains(',')
+            || value.contains('"')
+            || value.contains('\n')
+            || value.contains('\r')
         {
             let escaped = value.replace('"', "\"\"");
             format!("\"{escaped}\"")
@@ -65,10 +68,9 @@ impl Encoder for CsvEncoder {
         }
 
         // Get headers from first object
-        let first = arr
-            .first()
-            .and_then(Value::as_object)
-            .ok_or_else(|| EncodeError::Csv("CSV format requires all items to be objects".into()))?;
+        let first = arr.first().and_then(Value::as_object).ok_or_else(|| {
+            EncodeError::Csv("CSV format requires all items to be objects".into())
+        })?;
 
         let headers: Vec<&String> = first.keys().collect();
 
@@ -89,9 +91,9 @@ impl Encoder for CsvEncoder {
 
         // Data rows
         for item in arr {
-            let obj = item
-                .as_object()
-                .ok_or_else(|| EncodeError::Csv("CSV format requires all items to be objects".into()))?;
+            let obj = item.as_object().ok_or_else(|| {
+                EncodeError::Csv("CSV format requires all items to be objects".into())
+            })?;
 
             let values: Vec<String> = headers
                 .iter()

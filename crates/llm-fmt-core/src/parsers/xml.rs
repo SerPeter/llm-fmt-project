@@ -92,12 +92,11 @@ fn add_to_parent(parent: &mut Value, name: &str, child: Value) {
         Value::Object(obj) => {
             if let Some(existing) = obj.get_mut(name) {
                 // Convert to array if duplicate key
-                match existing {
-                    Value::Array(arr) => arr.push(child),
-                    _ => {
-                        let prev = std::mem::replace(existing, Value::Null);
-                        *existing = Value::Array(vec![prev, child]);
-                    }
+                if let Value::Array(arr) = existing {
+                    arr.push(child);
+                } else {
+                    let prev = std::mem::replace(existing, Value::Null);
+                    *existing = Value::Array(vec![prev, child]);
                 }
             } else {
                 obj.insert(name.to_string(), child);

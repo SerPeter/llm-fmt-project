@@ -4,32 +4,41 @@ version = "0.1.0"
 description = "Token-efficient data format converter for LLM contexts"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.14"
-authors = [{ name = "llm-fmt contributors" }]
-keywords = ["llm", "tokens", "json", "toon", "yaml", "ai", "agents"]
+requires-python = ">=3.10"
+authors = [{ name = "SerPeter" }]
+keywords = ["llm", "tokens", "json", "toon", "yaml", "ai", "agents", "context", "compression", "format", "converter"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Rust",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Text Processing :: General",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = [
-    "click>=8.1",
-    "pyyaml>=6.0",
+    "click~=8.1",
+    "pyyaml~=6.0",
 ]
 
 [project.scripts]
 llm-fmt = "llm_fmt.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/youruser/llm-fmt"
-Repository = "https://github.com/youruser/llm-fmt"
-Issues = "https://github.com/youruser/llm-fmt/issues"
+Homepage = "https://github.com/SerPeter/llm-fmt-project"
+Repository = "https://github.com/SerPeter/llm-fmt-project"
+Documentation = "https://github.com/SerPeter/llm-fmt-project#readme"
+Issues = "https://github.com/SerPeter/llm-fmt-project/issues"
+Changelog = "https://github.com/SerPeter/llm-fmt-project/releases"
 
 [build-system]
 requires = ["maturin>=1.4,<2.0"]
@@ -43,12 +52,12 @@ module-name = "llm_fmt._native"
 
 [dependency-groups]
 dev = [
+    "maturin>=1.4,<2.0",
     "pre-commit~=4.0",
     "yamlfix~=1.17",
     "ruff~=0.11",
     "hatchling~=1.18",
-    "hatch~=1.14",
-    "basedpyright~=1.29",
+    "basedpyright~=1.37",
 ]
 test = [
     "pytest~=8.3",
@@ -56,14 +65,14 @@ test = [
     "pytest-cov~=5.0",
     "pytest-bdd~=7.1",
     "pytest-timeout~=2.4",
-    "hypothesis~=6.121",
+    "hypothesis~=6.149",
 ]
 
 [tool.uv]
 default-groups = ["dev", "test"]
 
 [tool.basedpyright]
-pythonVersion = "3.14"
+pythonVersion = "3.10"
 typeCheckingMode = "standard"
 exclude = ["tests"]
 reportMissingImports = "warning"

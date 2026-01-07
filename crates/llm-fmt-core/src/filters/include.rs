@@ -15,8 +15,8 @@ use super::Filter;
 /// Filter that extracts data matching a path expression.
 #[derive(Debug, Clone)]
 pub struct IncludeFilter {
-    /// The path expression.
-    expression: String,
+    /// The original path expression (kept for debugging).
+    _expression: String,
     /// Parsed path segments.
     segments: Vec<PathSegment>,
 }
@@ -41,7 +41,7 @@ impl IncludeFilter {
     pub fn new(expression: &str) -> Result<Self> {
         let segments = Self::parse_expression(expression)?;
         Ok(Self {
-            expression: expression.to_string(),
+            _expression: expression.to_string(),
             segments,
         })
     }
@@ -99,10 +99,9 @@ impl IncludeFilter {
         }
 
         if segments.is_empty() {
-            return Err(FilterError::InvalidExpression(format!(
-                "Empty path expression: {expr}"
-            ))
-            .into());
+            return Err(
+                FilterError::InvalidExpression(format!("Empty path expression: {expr}")).into(),
+            );
         }
 
         Ok(segments)

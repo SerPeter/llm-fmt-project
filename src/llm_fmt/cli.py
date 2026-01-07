@@ -13,8 +13,14 @@ from llm_fmt.config import Config, load_config
 try:
     from llm_fmt._native import (
         analyze as rust_analyze,
+    )
+    from llm_fmt._native import (
         convert as rust_convert,
+    )
+    from llm_fmt._native import (
         is_available,
+    )
+    from llm_fmt._native import (
         version as rust_version,
     )
 
@@ -23,7 +29,9 @@ except ImportError:
     RUST_AVAILABLE = False
     rust_convert = None
     rust_analyze = None
-    rust_version = lambda: "N/A"
+
+    def rust_version() -> str:
+        return "N/A"
 
 
 class StrictModeError(Exception):

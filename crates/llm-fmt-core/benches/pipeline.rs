@@ -101,19 +101,15 @@ fn bench_pipeline_with_filter(c: &mut Criterion) {
         let bytes = json.as_bytes().to_vec();
 
         // Without filter
-        group.bench_with_input(
-            BenchmarkId::new("no_filter", depth),
-            &bytes,
-            |b, bytes| {
-                let pipeline = PipelineBuilder::new()
-                    .with_parser(JsonParser)
-                    .with_format("json", false)
-                    .unwrap()
-                    .build()
-                    .unwrap();
-                b.iter(|| pipeline.run(bytes));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("no_filter", depth), &bytes, |b, bytes| {
+            let pipeline = PipelineBuilder::new()
+                .with_parser(JsonParser)
+                .with_format("json", false)
+                .unwrap()
+                .build()
+                .unwrap();
+            b.iter(|| pipeline.run(bytes));
+        });
 
         // With max-depth filter (depth 3)
         group.bench_with_input(

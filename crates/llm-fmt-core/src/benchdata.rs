@@ -108,31 +108,24 @@ pub fn generate_mixed_types(count: usize) -> Value {
                 // Vary the fields based on index
                 match i % 5 {
                     0 => {
-                        obj.insert(
-                            "type".to_string(),
-                            Value::String("text".to_string()),
-                        );
+                        obj.insert("type".to_string(), Value::String("text".to_string()));
                         obj.insert(
                             "content".to_string(),
-                            Value::String(format!("This is item {i} with some longer text content that varies.")),
+                            Value::String(format!(
+                                "This is item {i} with some longer text content that varies."
+                            )),
                         );
                     }
                     1 => {
-                        obj.insert(
-                            "type".to_string(),
-                            Value::String("number".to_string()),
-                        );
+                        obj.insert("type".to_string(), Value::String("number".to_string()));
                         obj.insert(
                             "value".to_string(),
-                            Value::Number(Number::Float(i as f64 * 3.14159)),
+                            Value::Number(Number::Float(i as f64 * std::f64::consts::PI)),
                         );
                         obj.insert("precision".to_string(), Value::Number(Number::UInt(6)));
                     }
                     2 => {
-                        obj.insert(
-                            "type".to_string(),
-                            Value::String("array".to_string()),
-                        );
+                        obj.insert("type".to_string(), Value::String("array".to_string()));
                         obj.insert(
                             "items".to_string(),
                             Value::Array(
@@ -143,24 +136,15 @@ pub fn generate_mixed_types(count: usize) -> Value {
                         );
                     }
                     3 => {
-                        obj.insert(
-                            "type".to_string(),
-                            Value::String("nested".to_string()),
-                        );
+                        obj.insert("type".to_string(), Value::String("nested".to_string()));
                         let mut inner = IndexMap::new();
                         inner.insert("x".to_string(), Value::Number(Number::Int(i as i64)));
                         inner.insert("y".to_string(), Value::Number(Number::Int(-(i as i64))));
-                        inner.insert(
-                            "label".to_string(),
-                            Value::String(format!("point_{i}")),
-                        );
+                        inner.insert("label".to_string(), Value::String(format!("point_{i}")));
                         obj.insert("data".to_string(), Value::Object(inner));
                     }
                     _ => {
-                        obj.insert(
-                            "type".to_string(),
-                            Value::String("nullable".to_string()),
-                        );
+                        obj.insert("type".to_string(), Value::String("nullable".to_string()));
                         obj.insert("optional_field".to_string(), Value::Null);
                         obj.insert("present".to_string(), Value::Bool(i % 2 == 0));
                     }
@@ -186,10 +170,7 @@ pub fn generate_sparse_array(count: usize) -> Value {
             .map(|i| {
                 let mut obj = IndexMap::new();
                 // Always include id
-                obj.insert(
-                    "id".to_string(),
-                    Value::Number(Number::UInt(i as u64)),
-                );
+                obj.insert("id".to_string(), Value::Number(Number::UInt(i as u64)));
 
                 // Include a varying subset of fields based on index
                 // Use different thresholds per item to create varying field counts
@@ -414,10 +395,7 @@ pub fn value_to_csv(value: &Value) -> Option<String> {
         if let Some(obj) = item.as_object() {
             let row: Vec<String> = headers
                 .iter()
-                .map(|h| {
-                    obj.get(*h)
-                        .map_or_else(String::new, |v| csv_escape_value(v))
-                })
+                .map(|h| obj.get(*h).map_or_else(String::new, csv_escape_value))
                 .collect();
             result.push_str(&row.join(","));
             result.push('\n');
@@ -531,7 +509,10 @@ mod tests {
             .iter()
             .filter_map(|v| v.as_object().map(IndexMap::len))
             .collect();
-        assert!(sizes.iter().min() != sizes.iter().max(), "Objects should have varying field counts");
+        assert!(
+            sizes.iter().min() != sizes.iter().max(),
+            "Objects should have varying field counts"
+        );
     }
 
     #[test]

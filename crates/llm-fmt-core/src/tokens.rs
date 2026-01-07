@@ -9,25 +9,23 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 /// Common JSON/structured data token patterns (typically 1 token each).
-static JSON_COMMON_TOKENS: LazyLock<std::collections::HashSet<&'static str>> = LazyLock::new(|| {
-    [
-        // 2-char patterns
-        "{\"", "\"}", "\":", ",\"", "\",", ":[", "],", ":{", "},", "}]", "[{",
-        "{{", "}}", "[[", "]]", "::", ",,", "[\"", "\"]", "..", "--", "==",
-        // 3-char patterns
-        "\":\"", "\"},", "\":[", "\"]}", "\"],", "\"}]", "}}}", "{{{", "]}}", "\":{",
-        "...", "---", "===", ">>>", "<<<",
-        // 4-char patterns
-        "\":{\"", "\"},\"", "\"],[", "\":[\"", "\"]:\""
-    ]
-    .into_iter()
-    .collect()
-});
+static JSON_COMMON_TOKENS: LazyLock<std::collections::HashSet<&'static str>> =
+    LazyLock::new(|| {
+        [
+            // 2-char patterns
+            "{\"", "\"}", "\":", ",\"", "\",", ":[", "],", ":{", "},", "}]", "[{", "{{", "}}", "[[",
+            "]]", "::", ",,", "[\"", "\"]", "..", "--", "==", // 3-char patterns
+            "\":\"", "\"},", "\":[", "\"]}", "\"],", "\"}]", "}}}", "{{{", "]}}", "\":{", "...",
+            "---", "===", ">>>", "<<<", // 4-char patterns
+            "\":{\"", "\"},\"", "\"],[", "\":[\"", "\"]:\"",
+        ]
+        .into_iter()
+        .collect()
+    });
 
 /// Regex for splitting text into segments.
-static SEGMENT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(\s+|[^\s\w]+|\w+)").expect("Invalid regex")
-});
+static SEGMENT_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\s+|[^\s\w]+|\w+)").expect("Invalid regex"));
 
 /// Regex for detecting CJK characters.
 static CJK_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
@@ -36,14 +34,12 @@ static CJK_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Regex for number-only segments.
-static NUMBER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\d+$").expect("Invalid regex")
-});
+static NUMBER_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\d+$").expect("Invalid regex"));
 
 /// Regex for punctuation-only segments.
-static PUNCTUATION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[^\w\s]+$").expect("Invalid regex")
-});
+static PUNCTUATION_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[^\w\s]+$").expect("Invalid regex"));
 
 /// Default average characters per token for alphanumeric text.
 pub const DEFAULT_CHARS_PER_TOKEN: f64 = 4.0;
@@ -86,7 +82,7 @@ pub fn estimate_tokens_with_ratio(text: &str, chars_per_token: f64) -> usize {
 /// Estimate tokens for a single segment.
 fn estimate_segment_tokens(segment: &str, chars_per_token: f64) -> usize {
     // Whitespace: 0 tokens
-    if segment.chars().all(|c| c.is_whitespace()) {
+    if segment.chars().all(char::is_whitespace) {
         return 0;
     }
 

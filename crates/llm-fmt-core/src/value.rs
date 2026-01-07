@@ -125,8 +125,7 @@ impl From<f32> for Number {
 ///
 /// Represents any structured data that can be processed by llm-fmt.
 /// Uses [`IndexMap`] for objects to preserve insertion order.
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum Value {
     /// Represents a null value.
     #[default]
@@ -255,7 +254,6 @@ impl Value {
         self.as_array().and_then(|a| a.get(index))
     }
 }
-
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -89,9 +89,7 @@ impl PipelineBuilder {
             Error::Pipeline("Parser not set. Use with_parser() or with_auto_parser().".into())
         })?;
 
-        let encoder = self
-            .encoder
-            .unwrap_or_else(|| Box::new(ToonEncoder::new()));
+        let encoder = self.encoder.unwrap_or_else(|| Box::new(ToonEncoder::new()));
 
         Ok(Pipeline {
             parser,

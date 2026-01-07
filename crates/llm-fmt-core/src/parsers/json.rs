@@ -39,9 +39,11 @@ fn convert_json_value(value: serde_json::Value) -> Value {
         serde_json::Value::Array(arr) => {
             Value::Array(arr.into_iter().map(convert_json_value).collect())
         }
-        serde_json::Value::Object(obj) => {
-            Value::Object(obj.into_iter().map(|(k, v)| (k, convert_json_value(v))).collect())
-        }
+        serde_json::Value::Object(obj) => Value::Object(
+            obj.into_iter()
+                .map(|(k, v)| (k, convert_json_value(v)))
+                .collect(),
+        ),
     }
 }
 

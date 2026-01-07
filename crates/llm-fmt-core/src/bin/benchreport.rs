@@ -27,9 +27,7 @@ fn main() {
 
     // Benchmark uniform arrays (API response style)
     println!("## Uniform Arrays (API Response)\n");
-    println!(
-        "| Size | Format | Tokens | Savings | Bytes | Time |"
-    );
+    println!("| Size | Format | Tokens | Savings | Bytes | Time |");
     println!("|------|--------|--------|---------|-------|------|");
 
     for size in [100, 1000, 10000] {
@@ -65,7 +63,10 @@ fn main() {
 
         // Only JSON and YAML make sense for nested config
         for (format_name, encoder) in [
-            ("json", Box::new(JsonEncoder::new(false)) as Box<dyn Encoder>),
+            (
+                "json",
+                Box::new(JsonEncoder::new(false)) as Box<dyn Encoder>,
+            ),
             ("yaml", Box::new(YamlEncoder::new())),
         ] {
             let metrics = measure_encoding(&data, encoder.as_ref(), TIMING_ITERATIONS);
@@ -190,15 +191,11 @@ fn value_to_serde(value: &Value) -> serde_json::Value {
         Value::Bool(b) => serde_json::Value::Bool(*b),
         Value::Number(n) => serde_json::json!(n.as_f64()),
         Value::String(s) => serde_json::Value::String(s.clone()),
-        Value::Array(arr) => {
-            serde_json::Value::Array(arr.iter().map(value_to_serde).collect())
-        }
-        Value::Object(obj) => {
-            serde_json::Value::Object(
-                obj.iter()
-                    .map(|(k, v)| (k.clone(), value_to_serde(v)))
-                    .collect(),
-            )
-        }
+        Value::Array(arr) => serde_json::Value::Array(arr.iter().map(value_to_serde).collect()),
+        Value::Object(obj) => serde_json::Value::Object(
+            obj.iter()
+                .map(|(k, v)| (k.clone(), value_to_serde(v)))
+                .collect(),
+        ),
     }
 }

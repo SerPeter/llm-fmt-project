@@ -238,7 +238,7 @@ print(f"Savings: {report['formats']['toon']['savings_percent']}%")
 
 ## Requirements
 
-- Python 3.10+ (3.14+ for development)
+- Python 3.10+
 - Rust toolchain (for building from source)
 
 Runtime dependencies:
@@ -249,7 +249,7 @@ Runtime dependencies:
 
 ```bash
 # Clone and install in development mode
-git clone https://github.com/youruser/llm-fmt
+git clone https://github.com/SerPeter/llm-fmt-project
 cd llm-fmt
 uv sync
 

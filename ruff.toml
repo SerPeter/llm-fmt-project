@@ -1,5 +1,5 @@
 # Base configuration for Ruff linting and formatting.
-target-version = "py314"
+target-version = "py310"
 line-length = 120
 
 [format]
@@ -64,19 +64,39 @@ select = [
 ]
 
 ignore = [
-    "D203",   # one-blank-line-before-class (conflicts with D211)
-    "D213",   # multi-line-summary-second-line (conflicts with D212)
-    "ANN003", # missing-type-kwargs
-    "TD003",  # missing-todo-link
-    "COM812", # missing-trailing-comma (conflicts with formatter)
+    "D203",    # one-blank-line-before-class (conflicts with D211)
+    "D213",    # multi-line-summary-second-line (conflicts with D212)
+    "ANN003",  # missing-type-kwargs
+    "ANN401",  # any-type (used in placeholder functions)
+    "TD003",   # missing-todo-link
+    "COM812",  # missing-trailing-comma (conflicts with formatter)
+    "D100",    # missing-docstring-in-public-module
+    "D103",    # missing-docstring-in-public-function (for internal functions)
+    "D104",    # missing-docstring-in-public-package
+    "D107",    # missing-docstring-in-__init__
+    "D301",    # use-r-string (Click uses \b in docstrings)
+    "EM101",   # exception-must-not-use-string-literal
+    "EM102",   # exception-must-not-use-f-string-literal
+    "FBT001",  # boolean-positional-argument (Click options use booleans)
+    "FBT002",  # boolean-default-value
+    "PLR0913", # too-many-arguments (CLI functions need many options)
+    "PLR0912", # too-many-branches
+    "PLR0915", # too-many-statements
+    "TRY003",  # raise-vanilla-args
+    "TRY301",  # raise-within-try
+    "RUF022",  # unsorted-all
 ]
 
 [lint.per-file-ignores]
 "**/tests/**" = [
-    "S101",
-    "PLR2004",
-    "ANN",
-    "ARG002"
+    "S101",    # assert
+    "PLR2004", # magic-value-comparison
+    "ANN",     # all annotations
+    "ARG002",  # unused-method-argument
+    "D102",    # missing-docstring-in-public-method
+    "PLC0415", # import-outside-top-level
+    "Q000",    # single-quotes (byte strings)
+    "RUF043",  # unsafe-match-pattern
 ]
 
 [lint.pydocstyle]

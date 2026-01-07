@@ -389,7 +389,7 @@ class TestInvalidConfig:
 
     def test_missing_yaml_dependency(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Clear error when pyyaml is not available."""
-        import llm_fmt.config as config_module  # noqa: PLC0415
+        import llm_fmt.config as config_module
 
         # Simulate pyyaml not being available
         monkeypatch.setattr(config_module, "YAML_AVAILABLE", False)

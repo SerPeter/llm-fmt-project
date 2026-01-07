@@ -105,7 +105,10 @@ impl ToonEncoder {
     fn needs_quoting(s: &str) -> bool {
         s.is_empty()
             || s.contains(|c: char| {
-                matches!(c, '|' | ',' | ':' | '{' | '}' | '[' | ']' | '"' | '\n' | '\r' | '\t')
+                matches!(
+                    c,
+                    '|' | ',' | ':' | '{' | '}' | '[' | ']' | '"' | '\n' | '\r' | '\t'
+                )
             })
             || s.starts_with(char::is_whitespace)
             || s.ends_with(char::is_whitespace)
@@ -174,9 +177,9 @@ impl ToonEncoder {
 
         // Write data rows
         for item in arr {
-            let obj = item.as_object().ok_or_else(|| {
-                EncodeError::Toon("Expected object in tabular data".into())
-            })?;
+            let obj = item
+                .as_object()
+                .ok_or_else(|| EncodeError::Toon("Expected object in tabular data".into()))?;
 
             for (i, header) in headers.iter().enumerate() {
                 if i > 0 {

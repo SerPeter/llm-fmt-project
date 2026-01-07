@@ -170,10 +170,7 @@ mod tests {
 
         let arr = result.as_array().unwrap();
         assert_eq!(arr.len(), 2);
-        assert_eq!(
-            arr[0].get("name").and_then(Value::as_str),
-            Some("Alice")
-        );
+        assert_eq!(arr[0].get("name").and_then(Value::as_str), Some("Alice"));
     }
 
     #[test]
