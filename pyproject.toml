@@ -49,6 +49,7 @@ manifest-path = "crates/llm-fmt-py/Cargo.toml"
 features = ["pyo3/extension-module"]
 python-source = "src"
 module-name = "llm_fmt._native"
+include = ["LICENSE"]
 
 [dependency-groups]
 dev = [
