@@ -31,11 +31,15 @@ This tool sits at the boundary between your data sources and LLM consumption, op
 ## Installation
 
 ```bash
-# With pip
 pip install llm-file-format
+# or
+uv tool install llm-file-format
+```
 
-# With uv
-uv pip install llm-file-format
+After installation, use the `llm-fmt` command. Without installing:
+
+```bash
+uvx --from llm-file-format llm-fmt data.json
 ```
 
 ## Quick Start
@@ -371,7 +375,7 @@ copy llm-fmt.skill.md %USERPROFILE%\.claude\skills\
 {
   "permissions": {
     "allow": [
-      "Bash(uvx llm-fmt:*)"
+      "Bash(llm-fmt:*)"
     ]
   }
 }
