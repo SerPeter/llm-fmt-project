@@ -9,15 +9,13 @@ updates:
     commit-message:
       prefix: "deps(py)"
     groups:
-      dev-dependencies:
+      all:
         patterns:
-          - "pytest*"
-          - "ruff"
-          - "basedpyright"
-          - "pre-commit"
-          - "hypothesis"
-          - "hatch*"
-          - "yamlfix"
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-patch"
     open-pull-requests-limit: 10
 
   # Rust dependencies (Cargo)
@@ -29,13 +27,13 @@ updates:
     commit-message:
       prefix: "deps(rust)"
     groups:
-      serde:
+      all:
         patterns:
-          - "serde*"
-      serialization:
-        patterns:
-          - "quick-xml"
-          - "csv"
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-patch"
     open-pull-requests-limit: 10
 
   # GitHub Actions
@@ -46,4 +44,12 @@ updates:
       day: "monday"
     commit-message:
       prefix: "deps(actions)"
+    groups:
+      all:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-patch"
     open-pull-requests-limit: 5
